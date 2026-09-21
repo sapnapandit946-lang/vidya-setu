@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getQuizForLecture } from '../data/curriculumData.js';
 import {
   X,
   UploadCloud,
@@ -84,7 +85,17 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      // Step 1 & 2: Create lecture record
+      // Generate lecture-specific quiz associated directly with this lecture
+      const draftLectureId = formData.lectureId.trim() || `lec_${Date.now().toString(36)}`;
+      const generatedQuiz = getQuizForLecture({
+        lectureId: draftLectureId,
+        title: formData.title.trim(),
+        subject: formData.subject.trim(),
+        courseId: formData.courseId.trim(),
+        description: formData.description.trim(),
+      });
+
+      // Step 1 & 2: Create lecture record with explicit lecture-specific quiz
       const createRes = await fetch('/api/lectures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,6 +105,7 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
           subject: formData.subject.trim(),
           description: formData.description.trim(),
           lectureId: formData.lectureId.trim() || undefined,
+          quiz: generatedQuiz,
         }),
       });
 

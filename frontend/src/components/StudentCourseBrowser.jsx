@@ -10,75 +10,64 @@ import {
   Sparkles,
   ArrowLeft,
   CheckCircle2,
+  Wifi,
 } from 'lucide-react';
-import LectureDownloadPanel from './LectureDownloadPanel.jsx';
-
-const getResourceType = (lecture) => {
-  if (lecture.resourceType) return lecture.resourceType;
-  if (lecture.fileType) return lecture.fileType;
-  const fileName = lecture.fileName || lecture.fileUrl || '';
-  if (/\.pdf($|\?)/i.test(fileName)) return 'PDF';
-  if (/\.(ppt|pptx)($|\?)/i.test(fileName)) return 'Presentation';
-  if (/\.(mp3|wav|m4a|ogg)($|\?)/i.test(fileName)) return 'Audio';
-  return 'Video';
-};
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return null;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 export const StudentCourseBrowser = ({
   onSelectLecture,
-  onDownloadLecture,
   teacherLectures = [],
-  initialCourseId = null,
+  pendingSyncCount = 0,
+  onOpenSync,
 }) => {
   // Navigation State: 'courses' | 'subjects' | 'lectures'
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
-  // Combine static curriculum courses with teacher-published lectures from Parts 1 & 2
-  const enrichedCourses = CURRICULUM_DATA.map((course) => ({
-    ...course,
-    subjects: course.subjects.map((subject) => ({
-      ...subject,
-      lectures: subject.lectures.map((lecture) => ({
-        ...lecture,
-        versionId: lecture.versionId || `${lecture.lectureId}_${(lecture.version || 'V1').toLowerCase()}`,
-        resourceType: getResourceType(lecture),
-      })),
-    })),
-  }));
+  // Single Source of Truth: Group teacher-published lectures directly into Courses -> Subjects -> Lectures
+  let enrichedCourses = [];
 
-  // If there are teacher lectures not in default curriculum, group them into a dynamic course
   if (teacherLectures && teacherLectures.length > 0) {
-    const publishedCourse = {
-      courseId: 'published_courses',
-      courseName: 'Teacher Published Lectures',
-      description: 'Lectures verified and published from the Teacher Portal (V1 & V2).',
-      icon: 'BookOpen',
-      subjects: [],
-    };
+    const courseMap = {};
 
-    // Group by subject
-    const subjectMap = {};
     teacherLectures.forEach((lec) => {
-      const subj = lec.subject || 'General Studies';
-      if (!subjectMap[subj]) {
-        subjectMap[subj] = {
-          subjectId: `subj_${subj.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-          subjectName: subj,
-          description: `Teacher course module: ${subj}`,
+      const courseId = lec.courseId || 'General';
+      // Nicely format course name if it's like CS101 or MATH101
+      const courseName = courseId === 'CS101'
+        ? 'CS101: Computer Science'
+        : courseId === 'MATH101'
+        ? 'MATH101: Mathematics'
+        : courseId === 'PHYS101'
+        ? 'PHYS101: Physics'
+        : courseId;
+
+      if (!courseMap[courseId]) {
+        courseMap[courseId] = {
+          courseId,
+          courseName,
+          description: `Master curriculum module for ${courseName}, published directly by the Teacher Portal.`,
+          subjectsMap: {},
+        };
+      }
+
+      const subjectName = lec.subject || 'General Studies';
+      const subjectId = `subj_${subjectName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+
+      if (!courseMap[courseId].subjectsMap[subjectName]) {
+        courseMap[courseId].subjectsMap[subjectName] = {
+          subjectId,
+          subjectName,
+          description: `Subject module: ${subjectName}`,
           lectures: [],
         };
       }
-      subjectMap[subj].lectures.push({
+
+      courseMap[courseId].subjectsMap[subjectName].lectures.push({
+        ...lec,
         lectureId: lec.lectureId,
         title: lec.title,
         description: lec.description || 'Master lecture content.',
         duration: '35 mins',
+        currentVersion: lec.currentVersion || 'V1',
         version: lec.currentVersion || 'V1',
         versionId: lec.versionDetails?.versionId || lec.versionId || `${lec.lectureId}_${(lec.currentVersion || 'V1').toLowerCase()}`,
         subject: lec.subject,
@@ -91,8 +80,15 @@ export const StudentCourseBrowser = ({
       });
     });
 
-    publishedCourse.subjects = Object.values(subjectMap);
-    enrichedCourses.push(publishedCourse);
+    enrichedCourses = Object.values(courseMap).map((c) => ({
+      courseId: c.courseId,
+      courseName: c.courseName,
+      description: c.description,
+      subjects: Object.values(c.subjectsMap),
+    }));
+  } else {
+    // If no lectures have been published yet by teacher, fallback cleanly to base curriculum
+    enrichedCourses = [...CURRICULUM_DATA];
   }
 
     useEffect(() => {
@@ -144,6 +140,30 @@ export const StudentCourseBrowser = ({
           </>
         )}
       </div>
+
+      {/* Student MicroSync Quick Access Banner */}
+      {pendingSyncCount > 0 && onOpenSync && (
+        <div className="student-microsync-callout">
+          <div className="microsync-callout-left">
+            <div className="microsync-callout-icon">
+              <Wifi size={18} />
+            </div>
+            <div>
+              <div className="microsync-callout-title">MicroSync Ready ({pendingSyncCount} pending)</div>
+              <div className="microsync-callout-sub">
+                You have offline quizzes or doubts saved locally. Synchronize whenever connection is detected.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm btn-microsync-open"
+            onClick={onOpenSync}
+          >
+            Open MicroSync
+          </button>
+        </div>
+      )}
 
       {/* STEP 1: SELECT COURSE */}
       {!selectedCourse && (
@@ -241,11 +261,25 @@ export const StudentCourseBrowser = ({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                       <h4 className="lecture-row-title">{lec.title}</h4>
-                      <span className={`badge ${lec.version === 'V2' ? 'badge-v2' : 'badge-v1'}`}>{lec.version || 'V1'}</span>
-                      <span className="badge badge-published">{lec.resourceType}</span>
-                      <span className="badge badge-verified">{lec.verificationStatus || 'Verified'}</span>
+                      <span className={`badge ${(lec.currentVersion || lec.version) === 'V2' ? 'badge-v2' : 'badge-v1'}`}>
+                        <Sparkles size={12} />
+                        {lec.currentVersion || lec.version || 'V1'}
+                      </span>
+                      <span className="badge badge-published">Published</span>
+                      <span className="badge badge-verified">Verified</span>
+                      {(lec.versionDetails?.correctionDetails?.hasCorrection || (lec.currentVersion === 'V2' && lec.versionDetails?.correctionDetails?.note)) && (
+                        <span className="badge badge-correction" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', gap: '0.25rem' }}>
+                          ⚡ Correction Available
+                        </span>
+                      )}
                     </div>
                     <p className="lecture-row-desc">{lec.description}</p>
+                    {lec.versionDetails?.correctionDetails?.note && (
+                      <div style={{ fontSize: '0.78rem', color: '#0369a1', margin: '0.2rem 0 0.35rem', fontWeight: 500 }}>
+                        <strong>V1 → V2 Note:</strong> {lec.versionDetails.correctionDetails.note}
+                        {lec.versionDetails.correctionDetails.timestamp ? ` (at ${lec.versionDetails.correctionDetails.timestamp})` : ''}
+                      </div>
+                    )}
                     <span className="mono" style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       ID: {lec.lectureId}
                     </span>
@@ -258,6 +292,29 @@ export const StudentCourseBrowser = ({
                 </div>
 
                 <div className="lecture-row-right">
+                  {(lec.versionDetails?.correctionDetails?.hasCorrection || (lec.currentVersion === 'V2' && lec.versionDetails?.correctionDetails?.note)) && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ borderColor: '#f59e0b', color: '#b45309', background: '#fffbeb' }}
+                      onClick={() =>
+                        onSelectLecture({
+                          ...lec,
+                          courseName: selectedCourse.courseName,
+                          subjectName: selectedSubject.subjectName,
+                          action: 'watch',
+                          initialTimestamp: lec.versionDetails?.correctionDetails?.timestamp || '',
+                          reviewCorrection: true,
+                        })
+                      }
+                      id={`review-correction-${lec.lectureId}`}
+                      title="Review correction capsule and open video at correction timestamp"
+                    >
+                      <Sparkles size={15} color="#d97706" />
+                      Review Correction
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     className="btn btn-outline"

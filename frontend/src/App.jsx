@@ -39,21 +39,29 @@
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
-    useEffect(() => {
-      const refreshCount = () => {
-        getPendingSyncCount()
-          .then((count) => setPendingSyncCount(count))
-          .catch((e) => console.warn('Could not read IndexedDB count:', e));
-      };
-      refreshCount();
-      const handleOnline = async () => {
-        const count = await getPendingSyncCount().catch(() => 0);
-        setPendingSyncCount(count);
-        if (count > 0) setIsSyncModalOpen(true);
-      };
-      window.addEventListener('online', handleOnline);
-      return () => window.removeEventListener('online', handleOnline);
-    }, []);
+  // Initialize pending sync count from IndexedDB & listen for online events
+  useEffect(() => {
+    const refreshCount = () => {
+      getPendingSyncCount()
+        .then((count) => setPendingSyncCount(count))
+        .catch((e) => console.warn('Could not read IndexedDB count:', e));
+    };
+
+    refreshCount();
+
+    // Auto-open MicroSync modal if connection is detected and there are pending items (Student view only)
+    const handleOnline = async () => {
+      console.log('[MicroSync] Connection detected! Checking pending records...');
+      const count = await getPendingSyncCount().catch(() => 0);
+      setPendingSyncCount(count);
+      if (count > 0 && currentView === 'student-quiz') {
+        setIsSyncModalOpen(true);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [currentView]);
 
     const fetchLectures = async () => {
       try {
@@ -245,16 +253,21 @@
           ) : (
             <StudentCourseBrowser
               teacherLectures={lectures}
-              onDownloadLecture={handleStudentDownloadRequest}
-              onOpenResource={handleStudentLectureSelect}
-              initialCourseId={selectedCourseId}
-              onSelectLecture={handleStudentLectureSelect}
+              pendingSyncCount={pendingSyncCount}
+              onOpenSync={() => setIsSyncModalOpen(true)}
+              onSelectLecture={(lec) => {
+                if (lec.action === 'watch') {
+                  setSelectedVideoLecture(lec);
+                  setSelectedQuizLecture(null);
+                } else {
+                  setSelectedQuizLecture(lec);
+                  setSelectedVideoLecture(null);
+                }
+              }}
             />
           )
         ) : (
           /* PARTS 1 & 2: TEACHER DASHBOARD VIEW */
-
-
           <>
             {/* Dashboard Top Header */}
             <div className="dashboard-header">
@@ -264,20 +277,6 @@
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => setCurrentView('student-quiz')}
-                  id="switch-to-quiz-btn"
-                >
-                  <GraduationCap size={16} />
-                  Practice Quiz (Offline)
-                  {pendingSyncCount > 0 && (
-                    <span className="badge badge-pending-inline">
-                      {pendingSyncCount} Pending
-                    </span>
-                  )}
-                </button>
-
                 <button
                   className="btn btn-primary"
                   onClick={() => setIsModalOpen(true)}
@@ -292,23 +291,12 @@
             {/* Quick Stats Grid */}
             <div className="stats-container">
               <div className="stat-card">
-                <div className="stat-icon blue">
-                  <BookOpen size={24} />
+                <div className="stat-icon-wrapper" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                  <BookOpen size={22} />
                 </div>
-                <div className="stat-content">
+                <div>
+                  <div className="stat-label">Total Lectures</div>
                   <div className="stat-value">{lectures.length}</div>
-                  <div className="stat-label">Total Master Lectures</div>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon purple">
-                  <Sparkles size={24} />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">
-                    {lectures.length} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#64748b' }}>({v2Count} at V2)</span>
-                  </div>
                   <div className="stat-label">Published Packages</div>
                 </div>
               </div>
@@ -436,6 +424,7 @@
       <MicroSyncModal
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
+        lectures={lectures}
         onSyncComplete={(remainingCount) => {
           setPendingSyncCount(remainingCount);
         }}

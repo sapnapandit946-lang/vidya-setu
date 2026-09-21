@@ -239,6 +239,10 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
             <span className="card-course-tag">{quizData.courseName}</span>
+            <span className={`badge ${(lecture?.currentVersion || lecture?.version) === 'V2' ? 'badge-v2' : 'badge-v1'}`}>
+              <Sparkles size={12} />
+              {lecture?.currentVersion || lecture?.version || 'V1'}
+            </span>
             <span className="badge badge-offline">
               <WifiOff size={13} />
               Offline Mode
@@ -247,6 +251,9 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
               <BookOpen size={12} />
               Based on this lecture
             </span>
+            <span className="mono" style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+              Lecture ID: {quizData.lectureId}
+            </span>
           </div>
 
           <h2 className="quiz-title">{quizData.lectureTitle}</h2>
@@ -254,6 +261,10 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
             <span className="quiz-practice-tag">{quizData.title}</span>
             <span style={{ color: '#94a3b8' }}>•</span>
             <span style={{ color: '#64748b', fontSize: '0.9rem' }}>{quizData.subjectName}</span>
+            <span style={{ color: '#94a3b8' }}>•</span>
+            <span style={{ color: '#059669', fontSize: '0.825rem', fontWeight: 600 }}>
+              {quizData.questions.length} Lecture-Specific Questions
+            </span>
           </div>
         </div>
 
@@ -310,9 +321,9 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
                 <WifiOff size={13} />
                 Saved Offline
               </span>
-              <span className="badge badge-pending-sync">
+              <span className={`badge ${submissionResult.status === 'synced' ? 'badge-synced' : 'badge-pending-sync'}`}>
                 <Clock size={13} />
-                Pending Sync
+                {submissionResult.status === 'synced' ? 'Synced' : 'Pending Sync'}
               </span>
             </div>
 

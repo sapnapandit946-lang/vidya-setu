@@ -22,9 +22,27 @@ import {
 } from 'lucide-react';
 
 export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncChange }) => {
+  // Parse initial timestamp if provided (e.g. from Review Correction click)
+  const parseTimestampToSec = (ts) => {
+    if (!ts || typeof ts !== 'string') return null;
+    const parts = ts.trim().split(':');
+    if (parts.length === 2) {
+      const min = parseInt(parts[0], 10);
+      const sec = parseInt(parts[1], 10);
+      if (!isNaN(min) && !isNaN(sec)) return min * 60 + sec;
+    }
+    return null;
+  };
+
+  const initialSec = parseTimestampToSec(
+    lecture?.initialTimestamp || lecture?.versionDetails?.correctionDetails?.timestamp
+  );
+
   // Video Playback Simulation / Controls
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTimeSec, setCurrentTimeSec] = useState(1122); // Default to 18:42 (1122 seconds) for demonstration
+  const [currentTimeSec, setCurrentTimeSec] = useState(
+    initialSec !== null ? initialSec : 1122 // If correction timestamp exists, start there; else default 18:42
+  );
   const [durationSec] = useState(2700); // 45:00 total duration
   const [isMuted, setIsMuted] = useState(false);
 
@@ -147,7 +165,13 @@ export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncCha
             <WifiOff size={13} />
             Available Offline
           </span>
-          <span className="badge badge-v1">{lecture.version || 'V1'}</span>
+          <span className={`badge ${(lecture.currentVersion || lecture.version) === 'V2' ? 'badge-v2' : 'badge-v1'}`}>
+            <Sparkles size={12} />
+            {lecture.currentVersion || lecture.version || 'V1'}
+          </span>
+          <span className="badge badge-verified">
+            Verified
+          </span>
         </div>
       </div>
 
@@ -157,6 +181,63 @@ export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncCha
           {lecture.courseName || 'Class 10 Mathematics'} • {lecture.subjectName || lecture.subject || 'Quadratic Equations'}
         </span>
       </div>
+
+      {/* Correction Capsule Banner (V1 -> V2) */}
+      {(lecture.reviewCorrection || lecture.versionDetails?.correctionDetails?.hasCorrection || (lecture.currentVersion === 'V2' && lecture.versionDetails?.correctionDetails?.note)) && (
+        <div className="correction-capsule-banner" style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '8px',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1d4ed8',
+              flexShrink: 0,
+            }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong style={{ color: '#1e3a8a', fontSize: '0.925rem' }}>Correction Capsule (V1 → V2)</strong>
+                <span className="badge badge-v2" style={{ fontSize: '0.7rem', padding: '0.1rem 0.45rem' }}>Active V2</span>
+              </div>
+              <p style={{ margin: '0.15rem 0 0', color: '#1e40af', fontSize: '0.85rem' }}>
+                {lecture.versionDetails?.correctionDetails?.note || 'Corrected mathematical derivations and sign conventions in this lecture.'}
+              </p>
+            </div>
+          </div>
+
+          {lecture.versionDetails?.correctionDetails?.timestamp && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ background: '#ffffff', borderColor: '#93c5fd', color: '#1d4ed8', fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
+              onClick={() => {
+                const sec = parseTimestampToSec(lecture.versionDetails.correctionDetails.timestamp);
+                if (sec !== null) handleJumpTo(sec);
+              }}
+              title="Jump directly to correction timestamp"
+            >
+              <Clock size={14} />
+              Jump to Correction ({lecture.versionDetails.correctionDetails.timestamp})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Video Screen Container */}
       <div className="video-viewport-card">
@@ -318,8 +399,8 @@ export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncCha
                     <span>{d.timestamp}</span>
                   </button>
 
-                  <span className="badge badge-pending-sync">
-                    Pending Sync
+                  <span className={`badge ${d.status === 'synced' ? 'badge-synced' : 'badge-pending-sync'}`}>
+                    {d.status === 'synced' ? 'Synced' : 'Pending Sync'}
                   </span>
                 </div>
 
