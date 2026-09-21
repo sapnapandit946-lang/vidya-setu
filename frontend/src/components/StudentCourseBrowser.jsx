@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
+import LectureDownloadPanel from './LectureDownloadPanel.jsx';
 
 const getResourceType = (lecture) => {
   if (lecture.resourceType) return lecture.resourceType;
@@ -84,6 +85,7 @@ export const StudentCourseBrowser = ({
         fileName: lec.versionDetails?.fileName || lec.fileName,
         fileUrl: lec.versionDetails?.fileUrl || lec.fileUrl,
         fileSize: lec.versionDetails?.fileSize || lec.fileSize,
+        fileHash: lec.versionDetails?.fileHash || lec.fileHash,
         verificationStatus: lec.versionDetails?.verificationStatus || 'Verified',
         resourceType: getResourceType({ ...lec, ...(lec.versionDetails || {}) }),
       });
@@ -311,6 +313,10 @@ export const StudentCourseBrowser = ({
                     Practice Quiz
                   </button>
                 </div>
+
+                {lec.lectureId && lec.versionId && lec.fileSize && lec.fileHash && (
+                  <LectureDownloadPanel lecture={lec} />
+                )}
 
               </div>
             ))}

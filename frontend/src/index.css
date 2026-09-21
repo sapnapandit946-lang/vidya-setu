@@ -442,6 +442,96 @@ body {
   border: 1px solid var(--success-border);
 }
 
+.lecture-download-panel {
+  grid-column: 1 / -1;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+}
+
+.download-panel-header,
+.download-progress-meta,
+.download-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.download-panel-header strong {
+  margin-right: 0.5rem;
+}
+
+.download-version-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.download-network-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.download-network-status.online { color: var(--success-text); }
+.download-network-status.offline { color: #b45309; }
+
+.download-progress-track {
+  height: 0.45rem;
+  margin-top: 0.8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.15s ease;
+}
+
+.download-progress-meta {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.download-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem 0.75rem;
+  margin: 0.75rem 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.download-state-grid strong { color: var(--text-main); }
+.download-checkpoint-saved,
+.download-verified,
+.download-warning,
+.download-error {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.78rem;
+}
+
+.download-checkpoint-saved { color: #b45309; }
+.download-verified { color: var(--success-text); }
+.download-warning { color: #b45309; }
+.download-error { color: #b91c1c; }
+
+@media (max-width: 700px) {
+  .download-state-grid { grid-template-columns: repeat(2, 1fr); }
+  .download-actions { align-items: stretch; flex-direction: column; }
+  .download-actions .btn { width: 100%; }
+}
+
 /* Lecture Cards Grid */
 .lecture-grid {
   display: grid;
