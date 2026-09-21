@@ -4,10 +4,12 @@
  */
 
 const DB_NAME = 'VidyaSetuOfflineDB';
-const DB_VERSION = 3; // Bumped version for offlineDoubts store
+const DB_VERSION = 4; // Bumped version for resumable lecture downloads
 const STORE_ATTEMPTS = 'quizAttempts';
 const STORE_SUBMISSIONS = 'quizSubmissions';
 const STORE_DOUBTS = 'offlineDoubts';
+const STORE_LECTURE_DOWNLOADS = 'lectureDownloads';
+const STORE_LECTURE_CHUNKS = 'lectureDownloadChunks';
 
 /**
  * Opens or initializes the IndexedDB database
@@ -56,6 +58,23 @@ export const openDB = () => {
         });
         doubtStore.createIndex('lectureId', 'lectureId', { unique: false });
         doubtStore.createIndex('status', 'status', { unique: false });
+      }
+
+      // 4. Version-scoped lecture download checkpoints and chunks
+      if (!db.objectStoreNames.contains(STORE_LECTURE_DOWNLOADS)) {
+        const downloadStore = db.createObjectStore(STORE_LECTURE_DOWNLOADS, {
+          keyPath: ['lectureId', 'versionId'],
+        });
+        downloadStore.createIndex('lectureId', 'lectureId', { unique: false });
+        downloadStore.createIndex('downloadStatus', 'downloadStatus', { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_LECTURE_CHUNKS)) {
+        const chunkStore = db.createObjectStore(STORE_LECTURE_CHUNKS, {
+          keyPath: ['lectureId', 'versionId', 'chunkIndex'],
+        });
+        chunkStore.createIndex('lectureId', 'lectureId', { unique: false });
+        chunkStore.createIndex('versionId', 'versionId', { unique: false });
       }
     };
 
@@ -482,6 +501,67 @@ export const getPendingSyncCount = async () => {
     console.error('Error computing pending sync count:', err);
     return 0;
   }
+};
+
+export const saveLectureDownloadState = async (state) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_LECTURE_DOWNLOADS, 'readwrite');
+    const request = tx.objectStore(STORE_LECTURE_DOWNLOADS).put(state);
+    request.onsuccess = () => resolve(state);
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+export const getLectureDownloadState = async (lectureId, versionId) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const request = db
+      .transaction(STORE_LECTURE_DOWNLOADS, 'readonly')
+      .objectStore(STORE_LECTURE_DOWNLOADS)
+      .get([lectureId, versionId]);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+export const getLectureDownloadStates = async (lectureId) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const request = db
+      .transaction(STORE_LECTURE_DOWNLOADS, 'readonly')
+      .objectStore(STORE_LECTURE_DOWNLOADS)
+      .index('lectureId')
+      .getAll(lectureId);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+export const saveLectureDownloadChunk = async (chunk) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_LECTURE_CHUNKS, 'readwrite');
+    const request = tx.objectStore(STORE_LECTURE_CHUNKS).put(chunk);
+    request.onsuccess = () => resolve(chunk);
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+export const getLectureDownloadChunks = async (lectureId, versionId) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const request = db
+      .transaction(STORE_LECTURE_CHUNKS, 'readonly')
+      .objectStore(STORE_LECTURE_CHUNKS)
+      .getAll();
+    request.onsuccess = () => resolve(
+      (request.result || []).filter(
+        (chunk) => chunk.lectureId === lectureId && chunk.versionId === versionId
+      )
+    );
+    request.onerror = (event) => reject(event.target.error);
+  });
 };
 
 

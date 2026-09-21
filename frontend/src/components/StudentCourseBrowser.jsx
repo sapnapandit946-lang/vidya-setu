@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
+import LectureDownloadPanel from './LectureDownloadPanel.jsx';
 
 export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) => {
   // Navigation State: 'courses' | 'subjects' | 'lectures'
@@ -47,6 +48,9 @@ export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) 
         description: lec.description || 'Master lecture content.',
         duration: '35 mins',
         version: lec.currentVersion || 'V1',
+        versionId: lec.versionDetails?.versionId,
+        fileSize: lec.versionDetails?.fileSize,
+        fileHash: lec.versionDetails?.fileHash,
       });
     });
 
@@ -239,6 +243,8 @@ export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) 
                     Practice Quiz
                   </button>
                 </div>
+
+                <LectureDownloadPanel lecture={lec} />
 
               </div>
             ))}

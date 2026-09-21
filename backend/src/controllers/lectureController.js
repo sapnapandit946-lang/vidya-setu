@@ -1,7 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Lecture } from '../models/Lecture.js';
 import { LectureVersion } from '../models/LectureVersion.js';
 import { calculateFileHash } from '../utils/fileUpload.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.join(__dirname, '../../uploads');
+const DOWNLOAD_CHUNK_SIZE = process.env.NODE_ENV === 'production' ? 64 * 1024 : 10 * 1024;
 
 /**
  * POST /api/lectures
@@ -158,9 +166,14 @@ export const createLectureVersion = async (req, res) => {
       });
     }
 
-    // Check existing versions count to determine V1 vs V2 if not explicitly passed
-    const existingVersionsCount = await LectureVersion.countDocuments({ lectureId });
-    const versionNumber = req.body.versionNumber || (existingVersionsCount > 0 ? 'V2' : 'V1');
+    const existingVersions = await LectureVersion.find({ lectureId }).select('versionId').lean();
+    const versionNumbers = existingVersions
+      .map(({ versionId }) => Number(versionId?.match(/_v(\d+)(?:_|$)/i)?.[1]))
+      .filter(Number.isInteger);
+    const nextVersionNumber = versionNumbers.length > 0
+      ? Math.max(...versionNumbers) + 1
+      : existingVersions.length > 0 ? existingVersions.length + 1 : 1;
+    const versionNumber = `V${nextVersionNumber}`;
 
     const fileHash = await calculateFileHash(req.file.path);
     const suffix = versionNumber.toLowerCase();
@@ -267,5 +280,102 @@ export const getLatestVersion = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+const getVersionFile = async (lectureId, versionId) => {
+  const version = await LectureVersion.findOne({ lectureId, versionId }).lean();
+  if (!version) return null;
+
+  const filePath = path.join(uploadDir, path.basename(version.fileUrl));
+  return { version, filePath };
+};
+
+/**
+ * GET /api/lectures/:lectureId/versions/:versionId/manifest
+ * Returns immutable chunk metadata for one exact lecture version.
+ */
+export const getLectureVersionManifest = async (req, res) => {
+  try {
+    const { lectureId, versionId } = req.params;
+    const versionFile = await getVersionFile(lectureId, versionId);
+
+    if (!versionFile) {
+      return res.status(404).json({ success: false, message: 'Lecture version not found.' });
+    }
+
+    const fileBuffer = await fs.readFile(versionFile.filePath);
+    const totalChunks = Math.ceil(fileBuffer.length / DOWNLOAD_CHUNK_SIZE);
+    const chunks = [];
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * DOWNLOAD_CHUNK_SIZE;
+      const chunkBuffer = fileBuffer.subarray(start, start + DOWNLOAD_CHUNK_SIZE);
+      const chunkHash = await calculateFileHashFromBuffer(chunkBuffer);
+      chunks.push({
+        chunkId: `${lectureId}_${versionId}_${chunkIndex}`,
+        lectureId,
+        versionId,
+        chunkIndex,
+        chunkSize: chunkBuffer.length,
+        chunkHash,
+        chunkStatus: 'pending',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      lectureId,
+      versionId,
+      fileSize: versionFile.version.fileSize,
+      fileHash: versionFile.version.fileHash,
+      totalBytes: fileBuffer.length,
+      totalChunks,
+      chunkSize: DOWNLOAD_CHUNK_SIZE,
+      chunks,
+    });
+  } catch (error) {
+    console.error('Error creating lecture version manifest:', error);
+    return res.status(500).json({ success: false, message: 'Could not create lecture version manifest.' });
+  }
+};
+
+/**
+ * GET /api/lectures/:lectureId/versions/:versionId/chunks/:chunkIndex
+ * Streams one chunk from one exact lecture version.
+ */
+export const getLectureVersionChunk = async (req, res) => {
+  try {
+    const { lectureId, versionId, chunkIndex: chunkIndexParam } = req.params;
+    const chunkIndex = Number(chunkIndexParam);
+    const versionFile = await getVersionFile(lectureId, versionId);
+
+    if (!versionFile || !Number.isInteger(chunkIndex) || chunkIndex < 0) {
+      return res.status(404).json({ success: false, message: 'Lecture version chunk not found.' });
+    }
+
+    const fileBuffer = await fs.readFile(versionFile.filePath);
+    const start = chunkIndex * DOWNLOAD_CHUNK_SIZE;
+    if (start >= fileBuffer.length) {
+      return res.status(404).json({ success: false, message: 'Lecture version chunk not found.' });
+    }
+
+    const chunkBuffer = fileBuffer.subarray(start, start + DOWNLOAD_CHUNK_SIZE);
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': chunkBuffer.length,
+      'X-Lecture-Id': lectureId,
+      'X-Version-Id': versionId,
+      'X-Chunk-Index': String(chunkIndex),
+      'X-Chunk-Hash': await calculateFileHashFromBuffer(chunkBuffer),
+    });
+    return res.status(200).send(chunkBuffer);
+  } catch (error) {
+    console.error('Error fetching lecture version chunk:', error);
+    return res.status(500).json({ success: false, message: 'Could not fetch lecture version chunk.' });
+  }
+};
+
+const calculateFileHashFromBuffer = (buffer) => {
+  return import('crypto').then(({ createHash }) => createHash('sha256').update(buffer).digest('hex'));
 };
 
