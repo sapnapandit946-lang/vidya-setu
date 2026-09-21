@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CURRICULUM_DATA } from '../data/curriculumData.js';
 import {
   BookOpen,
+  Download,
   ChevronRight,
   GraduationCap,
   Layers,
@@ -68,6 +69,14 @@ export const StudentCourseBrowser = ({
         duration: '35 mins',
         currentVersion: lec.currentVersion || 'V1',
         version: lec.currentVersion || 'V1',
+        versionId: lec.versionDetails?.versionId || lec.versionId || `${lec.lectureId}_${(lec.currentVersion || 'V1').toLowerCase()}`,
+        subject: lec.subject,
+        fileName: lec.versionDetails?.fileName || lec.fileName,
+        fileUrl: lec.versionDetails?.fileUrl || lec.fileUrl,
+        fileSize: lec.versionDetails?.fileSize || lec.fileSize,
+        fileHash: lec.versionDetails?.fileHash || lec.fileHash,
+        verificationStatus: lec.versionDetails?.verificationStatus || 'Verified',
+        resourceType: getResourceType({ ...lec, ...(lec.versionDetails || {}) }),
       });
     });
 
@@ -81,6 +90,13 @@ export const StudentCourseBrowser = ({
     // If no lectures have been published yet by teacher, fallback cleanly to base curriculum
     enrichedCourses = [...CURRICULUM_DATA];
   }
+
+    useEffect(() => {
+      if (initialCourseId) {
+        setSelectedCourse(enrichedCourses.find((course) => course.courseId === initialCourseId) || null);
+        setSelectedSubject(null);
+      }
+    }, [initialCourseId]);
 
   // Handle Breadcrumb navigation
   const handleResetToCourses = () => {
@@ -267,6 +283,11 @@ export const StudentCourseBrowser = ({
                     <span className="mono" style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       ID: {lec.lectureId}
                     </span>
+                    {formatFileSize(lec.fileSize) && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' }}>
+                        {formatFileSize(lec.fileSize)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -302,14 +323,34 @@ export const StudentCourseBrowser = ({
                         ...lec,
                         courseName: selectedCourse.courseName,
                         subjectName: selectedSubject.subjectName,
-                        action: 'watch',
+                        action: lec.resourceType === 'Quiz'
+                          ? 'quiz'
+                          : lec.resourceType === 'Video' ? 'watch' : 'open-resource',
                       })
                     }
                     id={`watch-lecture-${lec.lectureId}`}
                     title="Watch offline video and ask timestamped doubts"
                   >
                     <BookOpen size={15} />
-                    Watch Lecture
+                    {lec.resourceType === 'Quiz' ? 'Practice Quiz' : lec.resourceType === 'PDF' ? 'Open PDF' : lec.resourceType === 'Presentation' ? 'Open Presentation' : lec.resourceType === 'Audio' ? 'Listen' : 'Watch Lecture'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() =>
+                      onDownloadLecture?.({
+                        ...lec,
+                        courseName: selectedCourse.courseName,
+                        subjectName: selectedSubject.subjectName,
+                        action: 'download',
+                      })
+                    }
+                    id={`download-lecture-${lec.lectureId}`}
+                    title="Download this lecture for offline study"
+                  >
+                    <Download size={15} />
+                    Download for Offline
                   </button>
 
                   <button
@@ -329,6 +370,10 @@ export const StudentCourseBrowser = ({
                     Practice Quiz
                   </button>
                 </div>
+
+                {lec.lectureId && lec.versionId && lec.fileSize && lec.fileHash && (
+                  <LectureDownloadPanel lecture={lec} />
+                )}
 
               </div>
             ))}
