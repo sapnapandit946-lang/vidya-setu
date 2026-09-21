@@ -58,6 +58,70 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.student-header {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.student-header-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.student-brand {
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.student-brand::before {
+  content: '📘';
+  margin-right: 0.45rem;
+}
+
+.student-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.student-nav-link {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  padding: 0.55rem 0.85rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.student-nav-link:hover {
+  background: #f1f5f9;
+  color: #1d4ed8;
+}
+
+.student-nav-link.active {
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+  color: var(--primary-text);
 }
 
 /* Header */
@@ -162,6 +226,33 @@ body {
   width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  min-width: 0;
+}
+
+.student-home-content {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .student-header-inner {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 0.85rem 1rem;
+  }
+
+  .student-nav {
+    justify-content: flex-start;
+  }
+
+  .main-wrapper {
+    padding: 1.25rem 1rem;
+  }
+
+  .student-updates-grid,
+  .student-courses-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 /* Dashboard Banner / Stats */
