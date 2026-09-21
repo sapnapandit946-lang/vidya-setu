@@ -37,6 +37,14 @@ const lectureVersionSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    correctionDetails: {
+      hasCorrection: { type: Boolean, default: false },
+      note: { type: String, default: '' },
+      timestamp: { type: String, default: '' }, // e.g. "18:42" or "05:30"
+      summary: { type: String, default: '' },
+      previousVersion: { type: String, default: 'V1' },
+      newVersion: { type: String, default: 'V2' },
+    },
     createdAt: {
       type: Date,
       default: Date.now,

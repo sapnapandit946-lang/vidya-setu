@@ -32,6 +32,25 @@ const lectureSchema = new mongoose.Schema(
       type: String,
       default: 'V1',
     },
+    quiz: {
+      quizId: { type: String },
+      title: { type: String, default: 'Practice Quiz' },
+      questions: [
+        {
+          questionId: { type: String, required: true },
+          questionNumber: { type: Number },
+          text: { type: String, required: true },
+          options: [
+            {
+              key: { type: String, required: true },
+              text: { type: String, required: true },
+            },
+          ],
+          correctAnswer: { type: String, required: true },
+          solution: { type: String, default: '' },
+        },
+      ],
+    },
   },
   {
     timestamps: true, // provides createdAt, updatedAt

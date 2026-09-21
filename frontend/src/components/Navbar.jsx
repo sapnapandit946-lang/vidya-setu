@@ -39,7 +39,7 @@ export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpen
             id="nav-quiz-tab"
           >
             <GraduationCap size={16} />
-            Practice Quiz (Offline)
+            Student Learning
             {pendingSyncCount > 0 && (
               <span className="nav-pending-dot" title={`${pendingSyncCount} pending sync`}>
                 {pendingSyncCount}
@@ -49,8 +49,8 @@ export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpen
         </div>
 
         <div className="nav-actions">
-          {/* MicroSync Trigger Pill */}
-          {pendingSyncCount > 0 ? (
+          {/* MicroSync Trigger Pill — STUDENT ONLY */}
+          {currentView === 'student-quiz' && pendingSyncCount > 0 ? (
             <button
               type="button"
               className="btn-microsync-nav-trigger"

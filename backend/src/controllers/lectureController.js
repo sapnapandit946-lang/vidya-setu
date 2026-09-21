@@ -9,7 +9,14 @@ import { calculateFileHash } from '../utils/fileUpload.js';
  */
 export const createLecture = async (req, res) => {
   try {
-    const { courseId, title, subject, description, lectureId: customLectureId } = req.body;
+    const {
+      courseId,
+      title,
+      subject,
+      description,
+      lectureId: customLectureId,
+      quiz,
+    } = req.body;
 
     if (!courseId || !title || !subject) {
       return res.status(400).json({
@@ -30,14 +37,24 @@ export const createLecture = async (req, res) => {
       });
     }
 
-    const lecture = new Lecture({
+    const lectureData = {
       lectureId,
       courseId,
       title,
       subject,
       description: description || '',
       currentVersion: 'V1',
-    });
+    };
+
+    if (quiz && quiz.questions && quiz.questions.length > 0) {
+      lectureData.quiz = {
+        quizId: quiz.quizId || `quiz_${lectureId}`,
+        title: quiz.title || 'Practice Quiz',
+        questions: quiz.questions,
+      };
+    }
+
+    const lecture = new Lecture(lectureData);
 
     await lecture.save();
 
@@ -175,6 +192,20 @@ export const createLectureVersion = async (req, res) => {
       { $set: { isActive: false } }
     );
 
+    // Optional Correction Capsule details (especially for V2 update)
+    const hasCorrection = Boolean(
+      req.body.correctionNote || req.body.correctionTimestamp || req.body.correctionSummary
+    );
+
+    const correctionDetails = {
+      hasCorrection,
+      note: req.body.correctionNote ? req.body.correctionNote.trim() : '',
+      timestamp: req.body.correctionTimestamp ? req.body.correctionTimestamp.trim() : '',
+      summary: req.body.correctionSummary ? req.body.correctionSummary.trim() : '',
+      previousVersion: req.body.previousVersion || 'V1',
+      newVersion: versionNumber,
+    };
+
     // Create the brand new version record
     const lectureVersion = new LectureVersion({
       lectureId,
@@ -185,6 +216,7 @@ export const createLectureVersion = async (req, res) => {
       fileHash,
       verificationStatus: 'verified',
       isActive: true,
+      correctionDetails,
       createdAt: new Date(),
     });
 
@@ -200,6 +232,20 @@ export const createLectureVersion = async (req, res) => {
     }
     if (req.body.description !== undefined) {
       lecture.description = req.body.description.trim();
+    }
+    if (req.body.quiz) {
+      try {
+        const parsedQuiz = typeof req.body.quiz === 'string' ? JSON.parse(req.body.quiz) : req.body.quiz;
+        if (parsedQuiz && parsedQuiz.questions && parsedQuiz.questions.length > 0) {
+          lecture.quiz = {
+            quizId: parsedQuiz.quizId || `quiz_${lectureId}`,
+            title: parsedQuiz.title || 'Practice Quiz',
+            questions: parsedQuiz.questions,
+          };
+        }
+      } catch (e) {
+        console.warn('Could not parse updated quiz for lecture:', e);
+      }
     }
 
     await lecture.save();

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getQuizForLecture } from '../data/curriculumData.js';
 import {
   X,
   UploadCloud,
@@ -23,6 +24,9 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
     title: '',
     subject: '',
     description: '',
+    correctionNote: '',
+    correctionTimestamp: '',
+    correctionSummary: '',
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
@@ -38,6 +42,9 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
         title: lecture.title || '',
         subject: lecture.subject || '',
         description: lecture.description || '',
+        correctionNote: '',
+        correctionTimestamp: '',
+        correctionSummary: '',
       });
       setSelectedFile(null);
       setErrorMessage('');
@@ -110,6 +117,27 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
       payload.append('title', formData.title.trim());
       payload.append('subject', formData.subject.trim());
       payload.append('description', formData.description.trim());
+      if (formData.correctionNote.trim()) {
+        payload.append('correctionNote', formData.correctionNote.trim());
+      }
+      if (formData.correctionTimestamp.trim()) {
+        payload.append('correctionTimestamp', formData.correctionTimestamp.trim());
+      }
+      if (formData.correctionSummary.trim()) {
+        payload.append('correctionSummary', formData.correctionSummary.trim());
+      }
+      payload.append('previousVersion', 'V1');
+
+      // Ensure V2 update has lecture-specific quiz questions attached
+      const v2Quiz = getQuizForLecture({
+        ...lecture,
+        title: formData.title.trim(),
+        subject: formData.subject.trim(),
+        description: formData.description.trim(),
+      });
+      if (v2Quiz) {
+        payload.append('quiz', JSON.stringify(v2Quiz));
+      }
 
       const res = await fetch(`/api/lectures/${lecture.lectureId}/versions`, {
         method: 'POST',
@@ -235,6 +263,12 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                           <div className="version-subtext mono">
                             ID: {ver.versionId} • Hash: {ver.fileHash?.substring(0, 10)}...
                           </div>
+                          {ver.correctionDetails?.hasCorrection && (
+                            <div style={{ marginTop: '0.25rem', fontSize: '0.78rem', color: '#0369a1' }}>
+                              ⚡ <strong>Correction:</strong> {ver.correctionDetails.note || 'Updated content'}
+                              {ver.correctionDetails.timestamp ? ` (at ${ver.correctionDetails.timestamp})` : ''}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -335,8 +369,77 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                   className="form-textarea"
                   value={formData.description}
                   onChange={handleInputChange}
-                  rows={3}
+                  rows={2}
                 />
+              </div>
+
+              {/* Correction Capsule Settings (V1 -> V2) */}
+              <div className="correction-capsule-card" style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <Sparkles size={16} color="#0284c7" />
+                  <strong style={{ fontSize: '0.925rem', color: '#0f172a' }}>
+                    Correction Capsule (V1 → V2)
+                  </strong>
+                  <span className="badge badge-v2" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
+                    Correction Note
+                  </span>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                  <label className="form-label" htmlFor="edit-correction-note" style={{ fontSize: '0.82rem' }}>
+                    What was corrected / updated?
+                  </label>
+                  <input
+                    id="edit-correction-note"
+                    name="correctionNote"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Corrected quadratic formula root derivation and signs"
+                    value={formData.correctionNote}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label className="form-label" htmlFor="edit-correction-timestamp" style={{ fontSize: '0.82rem' }}>
+                      Correction Timestamp (Optional)
+                    </label>
+                    <input
+                      id="edit-correction-timestamp"
+                      name="correctionTimestamp"
+                      type="text"
+                      className="form-input mono"
+                      placeholder="e.g. 18:42 or 05:30"
+                      value={formData.correctionTimestamp}
+                      onChange={handleInputChange}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Jumps student player directly to this moment.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="edit-correction-summary" style={{ fontSize: '0.82rem' }}>
+                      Summary Note (Optional)
+                    </label>
+                    <input
+                      id="edit-correction-summary"
+                      name="correctionSummary"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Fixes sign error in Step 3"
+                      value={formData.correctionSummary}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
@@ -452,6 +555,15 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                 <span className="summary-label">New File Attached:</span>
                 <span className="summary-val">{selectedFile?.name} ({formatFileSize(selectedFile?.size)})</span>
               </div>
+              {formData.correctionNote && (
+                <div className="success-summary-row">
+                  <span className="summary-label">Correction Capsule:</span>
+                  <span className="summary-val" style={{ color: '#0369a1', fontWeight: 600 }}>
+                    "{formData.correctionNote}"
+                    {formData.correctionTimestamp ? ` (at ${formData.correctionTimestamp})` : ''}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Checklist items requested in prompt */}
