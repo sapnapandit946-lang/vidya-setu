@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CURRICULUM_DATA } from '../data/curriculumData.js';
 import {
   BookOpen,
+  Download,
   ChevronRight,
   GraduationCap,
   Layers,
@@ -11,13 +12,44 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) => {
+const getResourceType = (lecture) => {
+  if (lecture.resourceType) return lecture.resourceType;
+  if (lecture.fileType) return lecture.fileType;
+  const fileName = lecture.fileName || lecture.fileUrl || '';
+  if (/\.pdf($|\?)/i.test(fileName)) return 'PDF';
+  if (/\.(ppt|pptx)($|\?)/i.test(fileName)) return 'Presentation';
+  if (/\.(mp3|wav|m4a|ogg)($|\?)/i.test(fileName)) return 'Audio';
+  return 'Video';
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return null;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export const StudentCourseBrowser = ({
+  onSelectLecture,
+  onDownloadLecture,
+  teacherLectures = [],
+  initialCourseId = null,
+}) => {
   // Navigation State: 'courses' | 'subjects' | 'lectures'
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
   // Combine static curriculum courses with teacher-published lectures from Parts 1 & 2
-  const enrichedCourses = [...CURRICULUM_DATA];
+  const enrichedCourses = CURRICULUM_DATA.map((course) => ({
+    ...course,
+    subjects: course.subjects.map((subject) => ({
+      ...subject,
+      lectures: subject.lectures.map((lecture) => ({
+        ...lecture,
+        versionId: lecture.versionId || `${lecture.lectureId}_${(lecture.version || 'V1').toLowerCase()}`,
+        resourceType: getResourceType(lecture),
+      })),
+    })),
+  }));
 
   // If there are teacher lectures not in default curriculum, group them into a dynamic course
   if (teacherLectures && teacherLectures.length > 0) {
@@ -47,12 +79,26 @@ export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) 
         description: lec.description || 'Master lecture content.',
         duration: '35 mins',
         version: lec.currentVersion || 'V1',
+        versionId: lec.versionDetails?.versionId || lec.versionId || `${lec.lectureId}_${(lec.currentVersion || 'V1').toLowerCase()}`,
+        subject: lec.subject,
+        fileName: lec.versionDetails?.fileName || lec.fileName,
+        fileUrl: lec.versionDetails?.fileUrl || lec.fileUrl,
+        fileSize: lec.versionDetails?.fileSize || lec.fileSize,
+        verificationStatus: lec.versionDetails?.verificationStatus || 'Verified',
+        resourceType: getResourceType({ ...lec, ...(lec.versionDetails || {}) }),
       });
     });
 
     publishedCourse.subjects = Object.values(subjectMap);
     enrichedCourses.push(publishedCourse);
   }
+
+    useEffect(() => {
+      if (initialCourseId) {
+        setSelectedCourse(enrichedCourses.find((course) => course.courseId === initialCourseId) || null);
+        setSelectedSubject(null);
+      }
+    }, [initialCourseId]);
 
   // Handle Breadcrumb navigation
   const handleResetToCourses = () => {
@@ -193,13 +239,19 @@ export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                       <h4 className="lecture-row-title">{lec.title}</h4>
-                      <span className="badge badge-v1">{lec.version || 'V1'}</span>
-                      <span className="badge badge-verified">Verified</span>
+                      <span className={`badge ${lec.version === 'V2' ? 'badge-v2' : 'badge-v1'}`}>{lec.version || 'V1'}</span>
+                      <span className="badge badge-published">{lec.resourceType}</span>
+                      <span className="badge badge-verified">{lec.verificationStatus || 'Verified'}</span>
                     </div>
                     <p className="lecture-row-desc">{lec.description}</p>
                     <span className="mono" style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       ID: {lec.lectureId}
                     </span>
+                    {formatFileSize(lec.fileSize) && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' }}>
+                        {formatFileSize(lec.fileSize)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -212,14 +264,34 @@ export const StudentCourseBrowser = ({ onSelectLecture, teacherLectures = [] }) 
                         ...lec,
                         courseName: selectedCourse.courseName,
                         subjectName: selectedSubject.subjectName,
-                        action: 'watch',
+                        action: lec.resourceType === 'Quiz'
+                          ? 'quiz'
+                          : lec.resourceType === 'Video' ? 'watch' : 'open-resource',
                       })
                     }
                     id={`watch-lecture-${lec.lectureId}`}
                     title="Watch offline video and ask timestamped doubts"
                   >
                     <BookOpen size={15} />
-                    Watch Lecture
+                    {lec.resourceType === 'Quiz' ? 'Practice Quiz' : lec.resourceType === 'PDF' ? 'Open PDF' : lec.resourceType === 'Presentation' ? 'Open Presentation' : lec.resourceType === 'Audio' ? 'Listen' : 'Watch Lecture'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() =>
+                      onDownloadLecture?.({
+                        ...lec,
+                        courseName: selectedCourse.courseName,
+                        subjectName: selectedSubject.subjectName,
+                        action: 'download',
+                      })
+                    }
+                    id={`download-lecture-${lec.lectureId}`}
+                    title="Download this lecture for offline study"
+                  >
+                    <Download size={15} />
+                    Download for Offline
                   </button>
 
                   <button
