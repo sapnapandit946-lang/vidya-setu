@@ -15,6 +15,12 @@ import {
   Check,
 } from 'lucide-react';
 
+const getVersionName = (versionId, fallback = 'V1') => (
+  versionId?.match(/[_-]v(\d+)(?:[_-]|$)/i)?.[1]
+    ? `V${versionId.match(/[_-]v(\d+)(?:[_-]|$)/i)[1]}`
+    : fallback
+);
+
 export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess }) => {
   // Steps: 'details' | 'edit' | 'review' | 'success'
   const [step, setStep] = useState('details');
@@ -144,6 +150,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
 
   const versionsList = lecture.allVersions || (lecture.versionDetails ? [lecture.versionDetails] : []);
   const currentVersionTag = lecture.currentVersion || 'V1';
+  const nextVersionTag = `V${Number(currentVersionTag.replace(/^V/i, '')) + 1}`;
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
@@ -152,7 +159,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
           <h3>
             {step === 'details' && 'Lecture Details & Versions'}
             {step === 'edit' && 'Update Lecture (Create V2)'}
-            {step === 'review' && 'Review Version V2'}
+            {step === 'review' && `Review Version ${nextVersionTag}`}
             {step === 'success' && 'V2 Published Successfully'}
           </h3>
           <button className="modal-close-btn" onClick={handleClose} aria-label="Close">
@@ -218,7 +225,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
               <div className="version-tree">
                 {versionsList.map((ver, idx) => {
                   const isCurrent = ver.isActive || idx === 0;
-                  const verName = idx === 0 && currentVersionTag === 'V2' ? 'V2' : 'V1';
+                  const verName = getVersionName(ver.versionId, idx === 0 ? currentVersionTag : 'V1');
                   return (
                     <div
                       key={ver.versionId || idx}
@@ -287,7 +294,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span className="badge badge-v2" style={{ fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
                     <Sparkles size={14} />
-                    V2
+                    {nextVersionTag}
                   </span>
                   <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
                     (Incrementing from current {currentVersionTag})
@@ -360,7 +367,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                     <div className="dropzone-icon">
                       <UploadCloud size={24} />
                     </div>
-                    <div className="dropzone-text">Click to upload replacement/updated file for V2</div>
+                    <div className="dropzone-text">Click to upload replacement/updated file for {nextVersionTag}</div>
                     <div className="dropzone-hint">Upload new lecture video, audio, slides or notes</div>
                   </div>
                 ) : (
@@ -398,7 +405,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                 className="btn btn-primary"
                 id="review-v2-btn"
               >
-                Review V2
+                Review {nextVersionTag}
                 <ArrowRight size={16} />
               </button>
             </div>
@@ -417,7 +424,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
 
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
-                Review Lecture Update: V2
+                Review Lecture Update: {nextVersionTag}
               </h2>
               <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.25rem' }}>
                 Verify that your changes are ready for publication.
@@ -426,7 +433,7 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
 
             <div className="info-callout" style={{ borderLeftColor: '#059669', background: '#ecfdf5', color: '#065f46' }}>
               <strong>Preservation Guarantee</strong>
-              V1 will remain unchanged. V2 will be stored separately.
+              {currentVersionTag} will remain unchanged. {nextVersionTag} will be stored separately.
             </div>
 
             <div className="success-summary-box">
@@ -438,14 +445,14 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                 <span className="summary-label">Previous Version:</span>
                 <span className="badge badge-v1">
                   <Sparkles size={12} />
-                  V1
+                  {currentVersionTag}
                 </span>
               </div>
               <div className="success-summary-row">
                 <span className="summary-label">New Version:</span>
                 <span className="badge badge-v2">
                   <Sparkles size={12} />
-                  V2
+                  {nextVersionTag}
                 </span>
               </div>
               <div className="success-summary-row">
@@ -457,10 +464,10 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
             {/* Checklist items requested in prompt */}
             <div className="review-checklist">
               <div className="review-check-item">
-                <Check size={16} /> Existing V1 preserved
+                <Check size={16} /> Existing {currentVersionTag} preserved
               </div>
               <div className="review-check-item">
-                <Check size={16} /> New V2 created
+                <Check size={16} /> New {nextVersionTag} created
               </div>
               <div className="review-check-item">
                 <Check size={16} /> New version content attached
@@ -489,12 +496,12 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
                 {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="spinner" />
-                    Publishing V2...
+                    Publishing {nextVersionTag}...
                   </>
                 ) : (
                   <>
                     <Sparkles size={16} />
-                    Publish V2
+                    Publish {nextVersionTag}
                   </>
                 )}
               </button>
