@@ -1,129 +1,234 @@
-import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar.jsx';
-import { LectureCard } from './components/LectureCard.jsx';
-import { CreateLectureModal } from './components/CreateLectureModal.jsx';
-import { LectureDetailsModal } from './components/LectureDetailsModal.jsx';
-import { StudentQuiz } from './components/StudentQuiz.jsx';
-import { StudentCourseBrowser } from './components/StudentCourseBrowser.jsx';
-import { OfflineVideoPlayer } from './components/OfflineVideoPlayer.jsx';
-import { MicroSyncModal } from './components/MicroSyncModal.jsx';
-import { getPendingSyncCount } from './utils/indexedDB.js';
+  import React, { useState, useEffect } from 'react';
+  import { Navbar } from './components/Navbar.jsx';
+  import { LectureCard } from './components/LectureCard.jsx';
+  import { CreateLectureModal } from './components/CreateLectureModal.jsx';
+  import { LectureDetailsModal } from './components/LectureDetailsModal.jsx';
+  import { StudentQuiz } from './components/StudentQuiz.jsx';
+  import { StudentCourseBrowser } from './components/StudentCourseBrowser.jsx';
+  import { OfflineVideoPlayer } from './components/OfflineVideoPlayer.jsx';
+  import { MicroSyncModal } from './components/MicroSyncModal.jsx';
+  import { getPendingSyncCount } from './utils/indexedDB.js';
+  import { StudentHome } from './components/StudentHome.jsx';
+  import { StudentDownloads } from './components/StudentDownloads.jsx';
+  import { StudentProfile } from './components/StudentProfile.jsx';
+  import { CURRICULUM_DATA } from './data/curriculumData.js';
 
-import {
-  Plus,
-  BookOpen,
-  CheckCircle2,
-  ShieldCheck,
-  RotateCw,
-  Search,
-  Sparkles,
-  AlertTriangle,
-  GraduationCap,
-} from 'lucide-react';
+  import {
+    Plus,
+    BookOpen,
+    ShieldCheck,
+    RotateCw,
+    Search,
+    Sparkles,
+    AlertTriangle,
+    GraduationCap,
+  } from 'lucide-react';
 
-export default function App() {
-  const [currentView, setCurrentView] = useState('teacher'); // 'teacher' | 'student-quiz'
-  const [selectedQuizLecture, setSelectedQuizLecture] = useState(null);
-  const [selectedVideoLecture, setSelectedVideoLecture] = useState(null);
+  export default function App() {
+    const [currentView, setCurrentView] = useState('student-home');
+    const [selectedQuizLecture, setSelectedQuizLecture] = useState(null);
+    const [selectedVideoLecture, setSelectedVideoLecture] = useState(null);
+    const [selectedDownloadLecture, setSelectedDownloadLecture] = useState(null);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [lectures, setLectures] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedLecture, setSelectedLecture] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [pendingSyncCount, setPendingSyncCount] = useState(0);
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
-  const [lectures, setLectures] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLecture, setSelectedLecture] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [pendingSyncCount, setPendingSyncCount] = useState(0);
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    useEffect(() => {
+      const refreshCount = () => {
+        getPendingSyncCount()
+          .then((count) => setPendingSyncCount(count))
+          .catch((e) => console.warn('Could not read IndexedDB count:', e));
+      };
+      refreshCount();
+      const handleOnline = async () => {
+        const count = await getPendingSyncCount().catch(() => 0);
+        setPendingSyncCount(count);
+        if (count > 0) setIsSyncModalOpen(true);
+      };
+      window.addEventListener('online', handleOnline);
+      return () => window.removeEventListener('online', handleOnline);
+    }, []);
 
-  // Initialize pending sync count from IndexedDB & listen for online events
-  useEffect(() => {
-    const refreshCount = () => {
-      getPendingSyncCount()
-        .then((count) => setPendingSyncCount(count))
-        .catch((e) => console.warn('Could not read IndexedDB count:', e));
-    };
-
-    refreshCount();
-
-    // Auto-open MicroSync modal if connection is detected and there are pending items
-    const handleOnline = async () => {
-      console.log('[MicroSync] Connection detected! Checking pending records...');
-      const count = await getPendingSyncCount().catch(() => 0);
-      setPendingSyncCount(count);
-      if (count > 0) {
-        setIsSyncModalOpen(true);
+    const fetchLectures = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch('/api/lectures');
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch lectures');
+        setLectures(data.lectures || []);
+        if (selectedLecture) {
+          const updated = data.lectures?.find((l) => l.lectureId === selectedLecture.lectureId);
+          if (updated) setSelectedLecture(updated);
+        }
+      } catch (err) {
+        console.error('Fetch lectures error:', err);
+        setError(err.message || 'Failed to connect to backend server.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, []);
+    useEffect(() => {
+      fetchLectures();
+    }, []);
 
-  const fetchLectures = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch('/api/lectures');
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to fetch lectures');
+    const handlePublishedSuccess = () => fetchLectures();
+    const handleUpdatedSuccess = () => fetchLectures();
+    const filteredLectures = lectures.filter((lec) => {
+      const q = searchQuery.toLowerCase();
+      return lec.title?.toLowerCase().includes(q) || lec.courseId?.toLowerCase().includes(q) || lec.subject?.toLowerCase().includes(q) || lec.description?.toLowerCase().includes(q);
+    });
+    const verifiedCount = lectures.filter((l) => l.versionDetails?.verificationStatus === 'verified').length;
+    const v2Count = lectures.filter((l) => l.currentVersion === 'V2').length;
+    const handleStudentLectureSelect = (lecture) => {
+      if (lecture.action === 'quiz' || lecture.resourceType === 'Quiz') {
+        setSelectedQuizLecture(lecture);
+        setSelectedVideoLecture(null);
+        setCurrentView('student-quiz');
+      } else if (lecture.action === 'open-resource' && lecture.resourceType !== 'Video') {
+        if (lecture.fileUrl) {
+          window.open(lecture.fileUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          setSelectedDownloadLecture(lecture);
+          setCurrentView('student-downloads');
+        }
+      } else if (lecture.action === 'watch') {
+        setSelectedVideoLecture(lecture);
+        setSelectedQuizLecture(null);
+        setCurrentView('student-offline-player');
+      } else {
+        setSelectedQuizLecture(lecture);
+        setSelectedVideoLecture(null);
+        setCurrentView('student-quiz');
       }
+    };
 
-      setLectures(data.lectures || []);
+    const handleStudentDownloadRequest = (lecture) => {
+      setSelectedDownloadLecture(lecture);
+      console.info('[Download] Member 2 integration point:', {
+        lectureId: lecture.lectureId,
+        versionId: lecture.versionId,
+      });
+      setCurrentView('student-downloads');
+    };
 
-      // If a lecture was selected, keep it updated
-      if (selectedLecture) {
-        const updated = data.lectures?.find((l) => l.lectureId === selectedLecture.lectureId);
-        if (updated) setSelectedLecture(updated);
-      }
-    } catch (err) {
-      console.error('Fetch lectures error:', err);
-      setError(err.message || 'Failed to connect to backend server.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleStudentVersionUpdate = (lecture) => {
+      setSelectedDownloadLecture(lecture);
+      console.info('[Version Update] Member 2 integration point:', {
+        lectureId: lecture.lectureId,
+        versionId: lecture.versionId,
+      });
+      setCurrentView('student-downloads');
+    };
 
-  useEffect(() => {
-    fetchLectures();
-  }, []);
+    const handleStudentWatch = (lecture) => {
+      handleStudentLectureSelect({ ...lecture, action: 'watch' });
+    };
 
-  const handlePublishedSuccess = () => {
-    fetchLectures();
-  };
+    const handleStudentQuiz = (lecture) => {
+      handleStudentLectureSelect({ ...lecture, action: 'quiz' });
+    };
 
-  const handleUpdatedSuccess = () => {
-    fetchLectures();
-  };
-
-  const filteredLectures = lectures.filter((lec) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      lec.title?.toLowerCase().includes(q) ||
-      lec.courseId?.toLowerCase().includes(q) ||
-      lec.subject?.toLowerCase().includes(q) ||
-      lec.description?.toLowerCase().includes(q)
-    );
-  });
-
-  const verifiedCount = lectures.filter(
-    (l) => l.versionDetails?.verificationStatus === 'verified'
-  ).length;
-
-  const v2Count = lectures.filter((l) => l.currentVersion === 'V2').length;
+    const continueLearningLecture = CURRICULUM_DATA
+      .flatMap((course) => course.subjects.flatMap((subject) => subject.lectures.map((lecture) => ({
+        ...lecture,
+        courseName: course.courseName,
+        subjectName: subject.subjectName,
+        versionId: lecture.versionId || `${lecture.lectureId}_${(lecture.version || 'V1').toLowerCase()}`,
+      })))).find((lecture) => lecture.lectureId === 'lec_math10_quad_01');
+    const latestContinueLearningRecord = lectures
+      .find((lecture) => lecture.lectureId === continueLearningLecture?.lectureId);
+    const latestContinueLearningVersion = latestContinueLearningRecord?.versionDetails
+      ? {
+          ...latestContinueLearningRecord.versionDetails,
+          version: latestContinueLearningRecord.currentVersion,
+        }
+      : null;
 
   return (
     <div className="app-container">
-      <Navbar
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        pendingSyncCount={pendingSyncCount}
-        onOpenSync={() => setIsSyncModalOpen(true)}
-      />
+      {[
+        'student-home',
+        'student-courses',
+        'student-quiz',
+        'student-downloads',
+        'student-offline-player',
+        'student-profile',
+      ].includes(currentView) ? (
+        <header className="student-header">
+          <div className="student-header-inner">
+            <strong className="student-brand">Vidya Setu</strong>
+            <nav className="student-nav" aria-label="Student navigation">
+              <button className={currentView === 'student-home' ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-home')}>Home</button>
+              <button className={['student-courses', 'student-quiz'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-courses')}>Courses</button>
+              <button className={['student-downloads', 'student-offline-player'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-downloads')}>Downloads</button>
+              <button className={currentView === 'student-profile' ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-profile')}>Profile</button>
+            </nav>
+          </div>
+        </header>
+      ) : (
+        <Navbar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          pendingSyncCount={pendingSyncCount}
+          onOpenSync={() => setIsSyncModalOpen(true)}
+        />
+      )}
 
       <main className="main-wrapper">
-        {currentView === 'student-quiz' ? (
+        {currentView === 'student-home' ? (
+          <StudentHome
+            onViewAllCourses={() => {
+              setSelectedCourseId(null);
+              setCurrentView('student-courses');
+            }}
+            onSelectCourse={(courseId) => {
+              setSelectedCourseId(courseId);
+              setCurrentView('student-courses');
+            }}
+            onResumeLecture={handleStudentWatch}
+            onPracticeQuiz={handleStudentQuiz}
+            onVersionUpdate={handleStudentVersionUpdate}
+            latestVersion={latestContinueLearningVersion}
+            continueLearningLecture={continueLearningLecture}
+          />
+        ) : currentView === 'student-courses' ? (
+          <StudentCourseBrowser
+            teacherLectures={lectures}
+            onSelectLecture={handleStudentLectureSelect}
+            onDownloadLecture={handleStudentDownloadRequest}
+            onOpenResource={handleStudentLectureSelect}
+            initialCourseId={selectedCourseId}
+          />
+        ) : currentView === 'student-downloads' ? (
+          <StudentDownloads
+            lecture={selectedDownloadLecture}
+            onOpenLecture={(lecture) => handleStudentLectureSelect({
+              ...lecture,
+              action: lecture.resourceType === 'Video' ? 'watch' : 'open-resource',
+            })}
+            onStartDownload={(lecture) => handleStudentDownloadRequest(lecture)}
+            onOpenResource={handleStudentLectureSelect}
+          />
+        ) : currentView === 'student-profile' ? (
+          <StudentProfile />
+        ) : currentView === 'student-offline-player' ? (
+          <OfflineVideoPlayer
+            lecture={selectedVideoLecture}
+            onBackToLectures={() => {
+              setSelectedVideoLecture(null);
+              setCurrentView('student-downloads');
+            }}
+            onPendingSyncChange={(count) => setPendingSyncCount(count)}
+          />
+        ) : currentView === 'student-quiz' ? (
           /* PART 3 & PART 4: OFFLINE STUDENT COURSE HIERARCHY, VIDEO & QUIZ */
           selectedVideoLecture ? (
             <OfflineVideoPlayer
@@ -140,15 +245,10 @@ export default function App() {
           ) : (
             <StudentCourseBrowser
               teacherLectures={lectures}
-              onSelectLecture={(lec) => {
-                if (lec.action === 'watch') {
-                  setSelectedVideoLecture(lec);
-                  setSelectedQuizLecture(null);
-                } else {
-                  setSelectedQuizLecture(lec);
-                  setSelectedVideoLecture(null);
-                }
-              }}
+              onDownloadLecture={handleStudentDownloadRequest}
+              onOpenResource={handleStudentLectureSelect}
+              initialCourseId={selectedCourseId}
+              onSelectLecture={handleStudentLectureSelect}
             />
           )
         ) : (
