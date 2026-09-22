@@ -70,11 +70,10 @@ const getChunk = async (lectureId, versionId, chunkIndex) => {
   return response;
 };
 
-export const LectureDownloadPanel = ({ lecture }) => {
+export const LectureDownloadPanel = ({ lecture, onWatchOffline }) => {
   const lectureId = lecture?.lectureId;
   const initialVersionId = lecture?.versionId;
   const [browserOnline, setBrowserOnline] = useState(() => navigator.onLine);
-  const [simulatedOffline, setSimulatedOffline] = useState(false);
   const [downloadState, setDownloadState] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const stateRef = useRef(null);
@@ -84,7 +83,7 @@ export const LectureDownloadPanel = ({ lecture }) => {
   const manuallyPausedRef = useRef(false);
 
   const isDev = import.meta.env.DEV;
-  const isOnline = browserOnline && !simulatedOffline;
+  const isOnline = browserOnline;
 
   useEffect(() => {
     onlineRef.current = isOnline;
@@ -277,6 +276,12 @@ export const LectureDownloadPanel = ({ lecture }) => {
   };
 
   const resumeWithLatestVersion = async (manualResume = false) => {
+    const persistedState = await getLectureDownloadState(lectureId, initialVersionId);
+    if (persistedState?.downloadStatus === 'completed' && persistedState.verificationStatus === 'verified') {
+      stateRef.current = persistedState;
+      setDownloadState(persistedState);
+      return;
+    }
     if (!onlineRef.current) {
       await pauseDownload();
       return;
@@ -326,9 +331,7 @@ export const LectureDownloadPanel = ({ lecture }) => {
     const restoreCheckpoint = async () => {
       try {
         const savedStates = await getLectureDownloadStates(lectureId);
-        const savedState = savedStates.find((state) => state.versionId === initialVersionId)
-          || savedStates.find((state) => state.downloadStatus !== 'completed')
-          || savedStates[0];
+        const savedState = savedStates.find((state) => state.versionId === initialVersionId);
         if (!cancelled && savedState) {
           stateRef.current = savedState;
           setDownloadState(savedState);
@@ -363,14 +366,11 @@ export const LectureDownloadPanel = ({ lecture }) => {
     };
   }, [lectureId]);
 
-  useEffect(() => {
-    if (simulatedOffline) pauseDownload();
-  }, [simulatedOffline]);
-
   if (!lectureId || !initialVersionId) return null;
 
   const progress = downloadState?.downloadProgress || 0;
-  const isComplete = downloadState?.downloadStatus === 'completed' && downloadState?.isVerified;
+  const isComplete = downloadState?.downloadStatus === 'completed'
+    && downloadState?.verificationStatus === 'verified';
   const statusLabel = isComplete
     ? 'Available Offline'
     : downloadState?.downloadStatus === 'paused'
@@ -416,24 +416,25 @@ export const LectureDownloadPanel = ({ lecture }) => {
       {isComplete && <div className="download-verified"><CheckCircle2 size={14} /> Verified and Available Offline</div>}
 
       <div className="download-actions">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={downloadState?.downloadStatus === 'downloading'
-            ? () => pauseDownload(true)
-            : () => resumeWithLatestVersion(true)}
-          disabled={!isOnline && downloadState?.downloadStatus !== 'downloading'}
-        >
-          {isComplete ? <CheckCircle2 size={15} /> : downloadState?.downloadStatus === 'downloading' ? <Pause size={15} /> : <Download size={15} />}
-          {isComplete ? 'Downloaded' : downloadState?.downloadStatus === 'downloading' ? 'Pause Download' : 'Download / Resume'}
-        </button>
-        {isDev && (
+        {isComplete ? (
           <button
             type="button"
-            className="btn btn-outline"
-            onClick={() => setSimulatedOffline((offline) => !offline)}
+            className="btn btn-primary"
+            onClick={() => onWatchOffline?.(lecture)}
           >
-            {simulatedOffline ? 'Simulate Online' : 'Simulate Offline'}
+            <Play size={15} /> Watch Offline
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={downloadState?.downloadStatus === 'downloading'
+              ? () => pauseDownload(true)
+              : () => resumeWithLatestVersion(true)}
+            disabled={!isOnline && downloadState?.downloadStatus !== 'downloading'}
+          >
+            {downloadState?.downloadStatus === 'downloading' ? <Pause size={15} /> : <Download size={15} />}
+            {downloadState?.downloadStatus === 'downloading' ? 'Pause Download' : 'Download / Resume'}
           </button>
         )}
       </div>

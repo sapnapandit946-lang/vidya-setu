@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CURRICULUM_DATA } from '../data/curriculumData.js';
+import LectureDownloadPanel from './LectureDownloadPanel.jsx';
 import {
   BookOpen,
   Download,
@@ -13,11 +14,30 @@ import {
   Wifi,
 } from 'lucide-react';
 
+const getResourceType = (lecture) => {
+  if (lecture.resourceType) return lecture.resourceType;
+  if (lecture.fileType) return lecture.fileType;
+  const fileName = lecture.fileName || lecture.fileUrl || '';
+  if (/\.pdf($|\?)/i.test(fileName)) return 'PDF';
+  if (/\.(ppt|pptx)($|\?)/i.test(fileName)) return 'Presentation';
+  if (/\.(mp3|wav|m4a|ogg)($|\?)/i.test(fileName)) return 'Audio';
+  return 'Video';
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export const StudentCourseBrowser = ({
   onSelectLecture,
+  onDownloadLecture,
   teacherLectures = [],
   pendingSyncCount = 0,
   onOpenSync,
+  initialCourseId = null,
 }) => {
   // Navigation State: 'courses' | 'subjects' | 'lectures'
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -372,7 +392,15 @@ export const StudentCourseBrowser = ({
                 </div>
 
                 {lec.lectureId && lec.versionId && lec.fileSize && lec.fileHash && (
-                  <LectureDownloadPanel lecture={lec} />
+                  <LectureDownloadPanel
+                    lecture={lec}
+                    onWatchOffline={(downloadedLecture) => onSelectLecture({
+                      ...downloadedLecture,
+                      courseName: selectedCourse.courseName,
+                      subjectName: selectedSubject.subjectName,
+                      action: 'watch',
+                    })}
+                  />
                 )}
 
               </div>

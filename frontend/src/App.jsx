@@ -178,6 +178,7 @@
               <button className={['student-courses', 'student-quiz'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-courses')}>Courses</button>
               <button className={['student-downloads', 'student-offline-player'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-downloads')}>Downloads</button>
               <button className={currentView === 'student-profile' ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-profile')}>Profile</button>
+              <button className="student-nav-link" onClick={() => setCurrentView('teacher')}>Teacher Portal</button>
             </nav>
           </div>
         </header>
@@ -218,6 +219,8 @@
         ) : currentView === 'student-downloads' ? (
           <StudentDownloads
             lecture={selectedDownloadLecture}
+            teacherLectures={lectures}
+            onWatchOffline={(lecture) => handleStudentLectureSelect({ ...lecture, action: 'watch' })}
             onOpenLecture={(lecture) => handleStudentLectureSelect({
               ...lecture,
               action: lecture.resourceType === 'Video' ? 'watch' : 'open-resource',
