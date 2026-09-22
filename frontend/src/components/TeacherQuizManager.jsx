@@ -86,13 +86,13 @@ export const TeacherQuizManager = ({ isOpen, lecture, onClose, onSaved }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+      <div className="modal-card teacher-quiz-manager" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <h3>{lecture.quiz?.questions?.length ? 'Manage Quiz' : 'Add Quiz'}</h3>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
         <div className="modal-body">
-          <div className="success-summary-box">
+          <div className="teacher-quiz-meta">
             <strong>{lecture.title}</strong>
             <div className="mono" style={{ marginTop: '0.35rem', fontSize: '0.78rem', color: '#64748b' }}>
               Lecture ID: {lecture.lectureId}
@@ -113,31 +113,36 @@ export const TeacherQuizManager = ({ isOpen, lecture, onClose, onSaved }) => {
           <div className="form-group">
             <label className="form-label">Quiz Questions</label>
             {questions.map((question, questionIndex) => (
-              <div key={question.questionId} className="success-summary-box" style={{ marginBottom: '0.75rem' }}>
+              <div key={question.questionId} className="teacher-quiz-question">
                 <input
                   className="form-input"
                   placeholder={`Question ${questionIndex + 1}`}
                   value={question.text}
                   onChange={(event) => updateQuestion(questionIndex, 'text', event.target.value)}
                 />
-                {question.options.map((option) => (
-                  <input
-                    key={option.key}
+                <div className="teacher-quiz-options">
+                  {question.options.map((option) => (
+                    <label key={option.key}>
+                      <span>{option.key}</span>
+                      <input
+                        className="form-input"
+                        placeholder={`Option ${option.key}`}
+                        value={option.text}
+                        onChange={(event) => updateOption(questionIndex, option.key, event.target.value)}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="teacher-quiz-correct">
+                  <span>Correct answer</span>
+                  <select
                     className="form-input"
-                    style={{ marginTop: '0.4rem' }}
-                    placeholder={`Option ${option.key}`}
-                    value={option.text}
-                    onChange={(event) => updateOption(questionIndex, option.key, event.target.value)}
-                  />
-                ))}
-                <select
-                  className="form-input"
-                  style={{ marginTop: '0.4rem' }}
-                  value={question.correctAnswer}
-                  onChange={(event) => updateQuestion(questionIndex, 'correctAnswer', event.target.value)}
-                >
-                  {question.options.map((option) => <option key={option.key} value={option.key}>Correct answer: {option.key}</option>)}
-                </select>
+                    value={question.correctAnswer}
+                    onChange={(event) => updateQuestion(questionIndex, 'correctAnswer', event.target.value)}
+                  >
+                    {question.options.map((option) => <option key={option.key} value={option.key}>{option.key}</option>)}
+                  </select>
+                </label>
                 <button type="button" className="btn btn-outline" style={{ marginTop: '0.5rem' }} onClick={() => setQuestions((current) => current.filter((_, index) => index !== questionIndex))}>
                   <Trash2 size={14} /> Remove Question
                 </button>
@@ -148,7 +153,7 @@ export const TeacherQuizManager = ({ isOpen, lecture, onClose, onSaved }) => {
             </button>
           </div>
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer teacher-quiz-actions">
           <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>
           <button type="button" className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
             <Save size={15} /> {isSaving ? 'Saving...' : 'Save Quiz'}
