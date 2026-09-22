@@ -74,15 +74,15 @@ export const StudentDownloads = ({ teacherLectures = [], onWatchOffline }) => {
   );
 
   return (
-  <div className="downloads-page" style={{ maxWidth: '960px', margin: '0 auto' }}>
-    <div className="downloads-page-header" style={{ marginBottom: '1.5rem' }}>
+  <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+    <div style={{ marginBottom: '1.5rem' }}>
       <div>
         <h2>Downloads</h2>
         <p style={{ color: '#64748b' }}>Manage offline lecture packages.</p>
       </div>
     </div>
 
-    <section className="downloads-section" style={{ marginBottom: '2rem' }}>
+    <section style={{ marginBottom: '2rem' }}>
       <h3>In Progress</h3>
       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem', background: '#ffffff' }}>
         {inProgressLectures.length > 0
@@ -91,7 +91,7 @@ export const StudentDownloads = ({ teacherLectures = [], onWatchOffline }) => {
       </div>
     </section>
 
-    <section className="downloads-section">
+    <section>
       <h3>Downloaded</h3>
       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem', background: '#ffffff' }}>
         {completedLectures.length > 0

@@ -294,7 +294,7 @@
           )
         ) : (
           /* PARTS 1 & 2: TEACHER DASHBOARD VIEW */
-          <div className="teacher-dashboard-layout">
+          <>
             {/* Dashboard Top Header */}
             <div className="dashboard-header">
               <div className="header-title">
@@ -428,7 +428,7 @@
                 ))}
               </div>
             )}
-          </div>
+          </>
         )}
       </main>
 

@@ -23,8 +23,10 @@ export const StudentHome = ({
   latestVersion,
 }) => {
   const [correctionReviewed, setCorrectionReviewed] = useState(false);
+  // Mock data for student home visual display
   const student = {
-    networkStatus: typeof navigator !== 'undefined' && navigator.onLine ? 'Online' : 'Offline',
+    name: 'Rahul',
+    networkStatus: 'Online', // Contract status: "Online" or "Offline"
   };
 
   const importantUpdates = [
@@ -39,7 +41,7 @@ export const StudentHome = ({
       id: 'upd-2',
       title: 'Teacher Correction — View Correction',
       status: 'Teacher Correction',
-      description: 'Discriminant calculation formula sign convention note from the teacher.',
+      description: 'Discriminant calculation formula sign convention note from Prof. Sharma.',
     },
   ];
 
@@ -91,10 +93,9 @@ export const StudentHome = ({
     },
   ];
   return (
-    <div className="student-home-content student-dashboard-layout" style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="student-home-content" style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* 1. GREETING & ONLINE STATUS BADGE */}
       <div
-        className="student-dashboard-hero"
         style={{
           background: 'linear-gradient(135deg, #1e3a8a, #1d4ed8)',
           color: '#ffffff',
@@ -110,15 +111,11 @@ export const StudentHome = ({
       >
         <div>
           <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-            Welcome back
+            Good morning, {student.name}
           </h1>
           <p style={{ color: '#bfdbfe', fontSize: '0.95rem', marginTop: '0.35rem', margin: 0 }}>
             Welcome to Vidya Setu. All your learning material is ready for offline study.
           </p>
-          <div className="learn-today-banner">
-            <strong>Learn Today</strong>
-            <span>Small steps build lasting progress.</span>
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -152,7 +149,7 @@ export const StudentHome = ({
       </div>
 
       {/* 2. IMPORTANT UPDATES SECTION */}
-      <section className="student-dashboard-section student-updates-section">
+      <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <Sparkles size={18} style={{ color: '#f59e0b' }} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
@@ -270,7 +267,7 @@ export const StudentHome = ({
       </section>
 
       {/* 3. CONTINUE LEARNING CARD */}
-      <section className="student-dashboard-section continue-learning-section">
+      <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <Play size={18} style={{ color: '#2563eb' }} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
@@ -279,7 +276,6 @@ export const StudentHome = ({
         </div>
 
         <div
-          className="continue-learning-card"
           style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
@@ -340,7 +336,7 @@ export const StudentHome = ({
       </section>
 
       {/* 4. MY COURSES CARDS (Mathematics, Science, English) */}
-      <section className="student-dashboard-section my-courses-section">
+      <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <BookOpen size={18} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
@@ -426,7 +422,7 @@ export const StudentHome = ({
       </section>
 
       {/* 5. RECENT ACTIVITY SECTION */}
-      <section className="student-dashboard-section recent-activity-section">
+      <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <Clock size={18} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
