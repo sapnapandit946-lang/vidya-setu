@@ -27,6 +27,7 @@ import {
 
 export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) => {
   const quizData = getQuizForLecture(lecture);
+  const versionId = lecture?.versionId || null;
 
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -115,6 +116,7 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
       await saveQuizAttempt({
         quizId: quizData.quizId,
         lectureId: quizData.lectureId,
+        versionId,
         questionId: currentQuestion.questionId,
         selectedAnswer: optionKey,
         correctAnswer: currentQuestion.correctAnswer,
@@ -167,6 +169,7 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
       await saveQuizAttempt({
         quizId: quizData.quizId,
         lectureId: quizData.lectureId,
+        versionId,
         questionId: q.questionId,
         selectedAnswer: selected || null,
         correctAnswer: q.correctAnswer,
@@ -177,6 +180,7 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
     const submission = {
       quizId: quizData.quizId,
       lectureId: quizData.lectureId,
+      versionId,
       score,
       totalQuestions: quizData.questions.length,
       correctCount,

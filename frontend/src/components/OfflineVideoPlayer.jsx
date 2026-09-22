@@ -19,9 +19,12 @@ import {
   Send,
   MessageSquare,
   Sparkles,
+  GraduationCap,
 } from 'lucide-react';
+import { getQuizForLecture } from '../data/curriculumData.js';
 
-export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncChange }) => {
+export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncChange, onPracticeQuiz }) => {
+  const quizData = getQuizForLecture(lecture);
   // Parse initial timestamp if provided (e.g. from Review Correction click)
   const parseTimestampToSec = (ts) => {
     if (!ts || typeof ts !== 'string') return null;
@@ -172,6 +175,15 @@ export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncCha
           <span className="badge badge-verified">
             Verified
           </span>
+          {quizData?.questions?.length > 0 && onPracticeQuiz && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => onPracticeQuiz(lecture)}
+            >
+              <GraduationCap size={15} /> Practice Quiz
+            </button>
+          )}
         </div>
       </div>
 

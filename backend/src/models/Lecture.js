@@ -35,6 +35,7 @@ const lectureSchema = new mongoose.Schema(
     quiz: {
       quizId: { type: String },
       title: { type: String, default: 'Practice Quiz' },
+      versionId: { type: String, default: null },
       questions: [
         {
           questionId: { type: String, required: true },

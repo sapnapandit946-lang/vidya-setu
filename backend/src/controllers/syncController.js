@@ -23,6 +23,7 @@ export const processMicroSync = async (req, res) => {
         {
           quizId: q.quizId,
           lectureId: q.lectureId,
+          versionId: q.versionId || null,
           score: q.score || 0,
           totalQuestions: q.totalQuestions || 0,
           correctCount: q.correctCount || 0,

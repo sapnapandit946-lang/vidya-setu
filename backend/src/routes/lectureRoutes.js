@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createLecture,
+  updateLectureQuiz,
   getLectures,
   createLectureVersion,
   getLatestVersion,
@@ -17,6 +18,9 @@ router.post('/', createLecture);
 
 // GET /api/lectures - Get all lectures with current version
 router.get('/', getLectures);
+
+// PATCH /api/lectures/:lectureId/quiz - Save the lecture-specific quiz
+router.patch('/:lectureId/quiz', updateLectureQuiz);
 
 // GET /api/lectures/:lectureId/versions - Get all versions for a lecture
 router.get('/:lectureId/versions', getLectureVersions);

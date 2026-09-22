@@ -10,6 +10,10 @@ const quizSubmissionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    versionId: {
+      type: String,
+      default: null,
+    },
     score: {
       type: Number,
       default: 0,

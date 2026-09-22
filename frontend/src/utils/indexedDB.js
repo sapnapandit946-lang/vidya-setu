@@ -105,6 +105,7 @@ export const openDB = () => {
 export const saveQuizAttempt = async ({
   quizId,
   lectureId,
+  versionId,
   questionId,
   selectedAnswer,
   correctAnswer,
@@ -124,6 +125,7 @@ export const saveQuizAttempt = async ({
       const record = {
         quizId,
         lectureId: lectureId || existing?.lectureId || 'unknown_lecture',
+        versionId: versionId || existing?.versionId || null,
         questionId,
         selectedAnswer,
         correctAnswer: correctAnswer !== undefined ? correctAnswer : existing?.correctAnswer,
@@ -187,6 +189,7 @@ export const getQuizAttempt = async (quizId, questionId) => {
 export const saveQuizSubmission = async ({
   quizId,
   lectureId,
+  versionId,
   score,
   totalQuestions,
   correctCount,
@@ -207,6 +210,7 @@ export const saveQuizSubmission = async ({
       const record = {
         quizId,
         lectureId,
+        versionId: versionId || existing?.versionId || null,
         score,
         totalQuestions,
         correctCount,

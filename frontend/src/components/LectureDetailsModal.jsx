@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { getQuizForLecture } from '../data/curriculumData.js';
 import {
   X,
   UploadCloud,
@@ -133,17 +132,6 @@ export const LectureDetailsModal = ({ isOpen, onClose, lecture, onUpdatedSuccess
         payload.append('correctionSummary', formData.correctionSummary.trim());
       }
       payload.append('previousVersion', 'V1');
-
-      // Ensure V2 update has lecture-specific quiz questions attached
-      const v2Quiz = getQuizForLecture({
-        ...lecture,
-        title: formData.title.trim(),
-        subject: formData.subject.trim(),
-        description: formData.description.trim(),
-      });
-      if (v2Quiz) {
-        payload.append('quiz', JSON.stringify(v2Quiz));
-      }
 
       const res = await fetch(`/api/lectures/${lecture.lectureId}/versions`, {
         method: 'POST',

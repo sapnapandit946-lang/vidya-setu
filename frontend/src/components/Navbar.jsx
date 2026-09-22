@@ -39,7 +39,7 @@ export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpen
             id="nav-quiz-tab"
           >
             <GraduationCap size={16} />
-            Student Learning
+            Practice Quiz (Offline)
             {pendingSyncCount > 0 && (
               <span className="nav-pending-dot" title={`${pendingSyncCount} pending sync`}>
                 {pendingSyncCount}

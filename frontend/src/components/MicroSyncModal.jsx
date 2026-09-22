@@ -86,6 +86,7 @@ export const MicroSyncModal = ({ isOpen, onClose, onSyncComplete, lectures = [] 
         : pendingAttempts.map(att => ({
             quizId: att.quizId,
             lectureId: att.lectureId,
+            versionId: att.versionId,
             score: att.score || 0,
             totalQuestions: 1,
             correctCount: att.score ? 1 : 0,

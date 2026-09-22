@@ -11,6 +11,7 @@
   import { StudentHome } from './components/StudentHome.jsx';
   import { StudentDownloads } from './components/StudentDownloads.jsx';
   import { StudentProfile } from './components/StudentProfile.jsx';
+  import { TeacherQuizManager } from './components/TeacherQuizManager.jsx';
   import { CURRICULUM_DATA } from './data/curriculumData.js';
 
   import {
@@ -38,6 +39,7 @@
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [quizLecture, setQuizLecture] = useState(null);
 
   // Initialize pending sync count from IndexedDB & listen for online events
   useEffect(() => {
@@ -178,6 +180,18 @@
               <button className={['student-courses', 'student-quiz'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-courses')}>Courses</button>
               <button className={['student-downloads', 'student-offline-player'].includes(currentView) ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-downloads')}>Downloads</button>
               <button className={currentView === 'student-profile' ? 'student-nav-link active' : 'student-nav-link'} onClick={() => setCurrentView('student-profile')}>Profile</button>
+              <button
+                className={`student-nav-link ${currentView === 'student-quiz' ? 'active' : ''}`}
+                onClick={() => setCurrentView('student-quiz')}
+                id="student-practice-quiz-nav"
+              >
+                <GraduationCap size={15} /> Practice Quiz (Offline)
+                {pendingSyncCount > 0 && (
+                  <span className="nav-pending-dot" title={`${pendingSyncCount} pending sync`}>
+                    {pendingSyncCount}
+                  </span>
+                )}
+              </button>
               <button className="student-nav-link" onClick={() => setCurrentView('teacher')}>Teacher Portal</button>
             </nav>
           </div>
@@ -233,6 +247,11 @@
         ) : currentView === 'student-offline-player' ? (
           <OfflineVideoPlayer
             lecture={selectedVideoLecture}
+            onPracticeQuiz={(lecture) => {
+              setSelectedQuizLecture(lecture);
+              setSelectedVideoLecture(null);
+              setCurrentView('student-quiz');
+            }}
             onBackToLectures={() => {
               setSelectedVideoLecture(null);
               setCurrentView('student-downloads');
@@ -244,6 +263,10 @@
           selectedVideoLecture ? (
             <OfflineVideoPlayer
               lecture={selectedVideoLecture}
+              onPracticeQuiz={(lecture) => {
+                setSelectedQuizLecture(lecture);
+                setSelectedVideoLecture(null);
+              }}
               onBackToLectures={() => setSelectedVideoLecture(null)}
               onPendingSyncChange={(count) => setPendingSyncCount(count)}
             />
@@ -400,6 +423,7 @@
                     key={lec.lectureId}
                     lecture={lec}
                     onOpenLecture={(lectureToOpen) => setSelectedLecture(lectureToOpen)}
+                    onManageQuiz={(lectureToManage) => setQuizLecture(lectureToManage)}
                   />
                 ))}
               </div>
@@ -421,6 +445,16 @@
         lecture={selectedLecture}
         onClose={() => setSelectedLecture(null)}
         onUpdatedSuccess={handleUpdatedSuccess}
+      />
+
+      <TeacherQuizManager
+        isOpen={!!quizLecture}
+        lecture={quizLecture}
+        onClose={() => setQuizLecture(null)}
+        onSaved={(updatedLecture) => {
+          setQuizLecture(updatedLecture);
+          fetchLectures();
+        }}
       />
 
       {/* MicroSync Modal (Part 5 Flow) */}

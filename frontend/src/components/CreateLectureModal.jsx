@@ -12,6 +12,18 @@ import {
   Loader2,
 } from 'lucide-react';
 
+const createEmptyQuestion = () => ({
+  questionId: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  text: '',
+  options: [
+    { key: 'A', text: '' },
+    { key: 'B', text: '' },
+    { key: 'C', text: '' },
+    { key: 'D', text: '' },
+  ],
+  correctAnswer: 'A',
+});
+
 export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -25,6 +37,7 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [publishedData, setPublishedData] = useState(null);
+  const [quizQuestions, setQuizQuestions] = useState([]);
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -51,6 +64,20 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+  };
+
+  const updateQuizQuestion = (questionIndex, field, value) => {
+    setQuizQuestions((questions) => questions.map((question, index) => (
+      index === questionIndex ? { ...question, [field]: value } : question
+    )));
+  };
+
+  const updateQuizOption = (questionIndex, optionKey, value) => {
+    setQuizQuestions((questions) => questions.map((question, index) => (
+      index === questionIndex
+        ? { ...question, options: question.options.map((option) => option.key === optionKey ? { ...option, text: value } : option) }
+        : question
+    )));
   };
 
   const formatFileSize = (bytes) => {
@@ -94,6 +121,9 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
         courseId: formData.courseId.trim(),
         description: formData.description.trim(),
       });
+      const quiz = quizQuestions.length > 0
+        ? { quizId: generatedQuiz.quizId, title: generatedQuiz.title, questions: quizQuestions }
+        : generatedQuiz;
 
       // Step 1 & 2: Create lecture record with explicit lecture-specific quiz
       const createRes = await fetch('/api/lectures', {
@@ -105,7 +135,7 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
           subject: formData.subject.trim(),
           description: formData.description.trim(),
           lectureId: formData.lectureId.trim() || undefined,
-          quiz: generatedQuiz,
+          quiz,
         }),
       });
 
@@ -159,6 +189,7 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
     });
     setSelectedFile(null);
     setPublishedData(null);
+    setQuizQuestions([]);
     setErrorMessage('');
     onClose();
   };
@@ -235,6 +266,31 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
                 </span>
               </div>
             </div>
+
+            {publishedData.lecture.quiz?.questions?.length > 0 ? (
+              <div className="success-summary-box" style={{ marginTop: '1rem' }}>
+                <div className="success-summary-row">
+                  <span className="summary-label">Practice Quiz:</span>
+                  <span className="badge badge-published">
+                    {publishedData.lecture.quiz.questions.length} Questions Attached
+                  </span>
+                </div>
+                {publishedData.lecture.quiz.questions.map((question, index) => (
+                  <div key={question.questionId || index} style={{ marginTop: '0.75rem', color: '#334155' }}>
+                    <strong>{index + 1}. {question.text}</strong>
+                    <div style={{ marginTop: '0.25rem', fontSize: '0.85rem' }}>
+                      {question.options?.map((option) => (
+                        <div key={option.key}>
+                          {option.key}. {option.text}{option.key === question.correctAnswer ? ' (Correct)' : ''}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="info-callout" style={{ marginTop: '1rem' }}>No quiz available for this lecture.</div>
+            )}
 
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleResetAndClose}>
               View in Dashboard
@@ -318,6 +374,49 @@ export const CreateLectureModal = ({ isOpen, onClose, onPublishedSuccess }) => {
                   disabled={isSubmitting}
                   rows={3}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Quiz Questions (Optional)</label>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-0.35rem' }}>
+                  Add lecture-specific multiple-choice questions. Leave empty to use the generated lecture quiz.
+                </p>
+                {quizQuestions.map((question, questionIndex) => (
+                  <div key={question.questionId} className="success-summary-box" style={{ marginBottom: '0.75rem' }}>
+                    <input
+                      className="form-input"
+                      placeholder={`Question ${questionIndex + 1}`}
+                      value={question.text}
+                      onChange={(e) => updateQuizQuestion(questionIndex, 'text', e.target.value)}
+                      required
+                    />
+                    {question.options.map((option) => (
+                      <input
+                        key={option.key}
+                        className="form-input"
+                        style={{ marginTop: '0.4rem' }}
+                        placeholder={`Option ${option.key}`}
+                        value={option.text}
+                        onChange={(e) => updateQuizOption(questionIndex, option.key, e.target.value)}
+                        required
+                      />
+                    ))}
+                    <select
+                      className="form-input"
+                      style={{ marginTop: '0.4rem' }}
+                      value={question.correctAnswer}
+                      onChange={(e) => updateQuizQuestion(questionIndex, 'correctAnswer', e.target.value)}
+                    >
+                      {question.options.map((option) => <option key={option.key} value={option.key}>Correct answer: {option.key}</option>)}
+                    </select>
+                    <button type="button" className="btn btn-outline" style={{ marginTop: '0.5rem' }} onClick={() => setQuizQuestions((questions) => questions.filter((_, index) => index !== questionIndex))}>
+                      Remove Question
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline" onClick={() => setQuizQuestions((questions) => [...questions, createEmptyQuestion()])}>
+                  Add Question
+                </button>
               </div>
 
               <div className="form-group">

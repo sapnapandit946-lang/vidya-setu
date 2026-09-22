@@ -82,6 +82,41 @@ export const createLecture = async (req, res) => {
 };
 
 /**
+ * PATCH /api/lectures/:lectureId/quiz
+ * Saves the lecture-specific quiz without publishing a new lecture file.
+ */
+export const updateLectureQuiz = async (req, res) => {
+  try {
+    const { lectureId } = req.params;
+    const { quizId, title, questions, versionId } = req.body;
+    const lecture = await Lecture.findOne({ lectureId });
+
+    if (!lecture) {
+      return res.status(404).json({ success: false, message: `Lecture not found with ID ${lectureId}.` });
+    }
+
+    if (!Array.isArray(questions)) {
+      return res.status(400).json({ success: false, message: 'Quiz questions must be an array.' });
+    }
+
+    lecture.quiz = questions.length > 0
+      ? {
+          quizId: quizId || `quiz_${lectureId}`,
+          title: title || 'Practice Quiz',
+          versionId: versionId || null,
+          questions,
+        }
+      : undefined;
+    await lecture.save();
+
+    return res.status(200).json({ success: true, lecture });
+  } catch (error) {
+    console.error('Error updating lecture quiz:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update lecture quiz.', error: error.message });
+  }
+};
+
+/**
  * GET /api/lectures
  * Fetches all lectures with their current active version details and full version history
  */

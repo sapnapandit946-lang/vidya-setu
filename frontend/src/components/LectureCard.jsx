@@ -1,10 +1,11 @@
 import React from 'react';
-import { Sparkles, CheckCircle2, ShieldCheck, Clock, Layers, ArrowUpRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, ShieldCheck, Clock, Layers, ArrowUpRight, GraduationCap } from 'lucide-react';
 
-export const LectureCard = ({ lecture, onOpenLecture }) => {
+export const LectureCard = ({ lecture, onOpenLecture, onManageQuiz }) => {
   const latestVersion = lecture.versionDetails;
   const allVersions = lecture.allVersions || (latestVersion ? [latestVersion] : []);
   const currentVer = lecture.currentVersion || 'V1';
+  const hasQuiz = lecture.quiz?.questions?.length > 0;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Just now';
@@ -41,6 +42,12 @@ export const LectureCard = ({ lecture, onOpenLecture }) => {
               <ShieldCheck size={12} />
               Verified
             </span>
+            {hasQuiz && (
+              <span className="badge badge-published">
+                <GraduationCap size={12} />
+                Quiz Available
+              </span>
+            )}
           </div>
         </div>
 
@@ -101,6 +108,14 @@ export const LectureCard = ({ lecture, onOpenLecture }) => {
           >
             Open & Update Lecture
             <ArrowUpRight size={14} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem', marginTop: '0.5rem' }}
+            onClick={() => onManageQuiz && onManageQuiz(lecture)}
+          >
+            {hasQuiz ? 'Manage Quiz' : 'Add Quiz'}
           </button>
         </div>
 
