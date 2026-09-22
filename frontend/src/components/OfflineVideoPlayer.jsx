@@ -4,6 +4,7 @@ import {
   getDoubtsForLecture,
   getPendingSyncCount,
 } from '../utils/indexedDB.js';
+import { saveProgressToBackend } from '../utils/backendApi.js';
 import {
   Play,
   Pause,
@@ -149,10 +150,16 @@ export const OfflineVideoPlayer = ({ lecture, onBackToLectures, onPendingSyncCha
   const handleSeek = (e) => {
     const newSec = Number(e.target.value);
     setCurrentTimeSec(newSec);
+    if (lecture?.versionId) {
+      saveProgressToBackend({ lectureId: lecture.lectureId, versionId: lecture.versionId, playbackPosition: newSec, syncStatus: 'Synced' }).catch(() => {});
+    }
   };
 
   const handleJumpTo = (secs) => {
     setCurrentTimeSec(secs);
+    if (lecture?.versionId) {
+      saveProgressToBackend({ lectureId: lecture.lectureId, versionId: lecture.versionId, playbackPosition: secs, syncStatus: 'Synced' }).catch(() => {});
+    }
   };
 
   return (

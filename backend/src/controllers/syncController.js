@@ -1,5 +1,7 @@
 import { StudentDoubt } from '../models/StudentDoubt.js';
 import { QuizSubmission } from '../models/QuizSubmission.js';
+import { StudentProgress } from '../models/StudentProgress.js';
+import { QuizAttempt } from '../models/QuizAttempt.js';
 
 /**
  * Handles batch synchronization of offline quiz submissions and doubts
@@ -7,14 +9,36 @@ import { QuizSubmission } from '../models/QuizSubmission.js';
  */
 export const processMicroSync = async (req, res) => {
   try {
-    const { quizzes = [], doubts = [] } = req.body;
+    const { progress = [], attempts = [], quizzes = [], doubts = [] } = req.body;
 
-    console.log(`[MicroSync] Received batch sync request: ${quizzes.length} quizzes, ${doubts.length} doubts`);
+    console.log(`[MicroSync] Received batch sync request: ${progress.length} progress, ${attempts.length} attempts, ${quizzes.length} quizzes, ${doubts.length} doubts`);
 
+    const syncedProgress = [];
+    const syncedAttempts = [];
     const syncedQuizzes = [];
     const syncedDoubts = [];
 
-    // 1. Process Quizzes
+    for (const item of progress) {
+      if (!item.lectureId || !item.versionId) continue;
+      const record = await StudentProgress.findOneAndUpdate(
+        { studentId: item.studentId || 'VS-STU-001', lectureId: item.lectureId, versionId: item.versionId },
+        { ...item, studentId: item.studentId || 'VS-STU-001', syncStatus: 'Synced', updatedAt: new Date() },
+        { upsert: true, new: true }
+      );
+      syncedProgress.push({ lectureId: record.lectureId, versionId: record.versionId, status: 'Synced' });
+    }
+
+    for (const item of attempts) {
+      if (!item.quizId || !item.lectureId || !item.attemptId) continue;
+      const record = await QuizAttempt.findOneAndUpdate(
+        { attemptId: item.attemptId },
+        { ...item, studentId: item.studentId || 'VS-STU-001', status: 'Synced' },
+        { upsert: true, new: true }
+      );
+      syncedAttempts.push({ attemptId: record.attemptId, status: 'Synced' });
+    }
+
+    // Process completed quiz submissions.
     for (const q of quizzes) {
       if (!q.quizId || !q.lectureId) continue;
 
@@ -72,6 +96,10 @@ export const processMicroSync = async (req, res) => {
       message: 'Learning records synced successfully',
       syncedQuizzesCount: syncedQuizzes.length,
       syncedDoubtsCount: syncedDoubts.length,
+      syncedProgressCount: syncedProgress.length,
+      syncedAttemptsCount: syncedAttempts.length,
+      syncedProgress,
+      syncedAttempts,
       syncedQuizzes,
       syncedDoubts,
       serverTime: new Date().toISOString(),

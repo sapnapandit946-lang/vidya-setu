@@ -12,6 +12,7 @@
   import { StudentDownloads } from './components/StudentDownloads.jsx';
   import { StudentProfile } from './components/StudentProfile.jsx';
   import { TeacherQuizManager } from './components/TeacherQuizManager.jsx';
+  import { LoginPage } from './components/LoginPage.jsx';
   import { CURRICULUM_DATA } from './data/curriculumData.js';
 
   import {
@@ -26,7 +27,8 @@
   } from 'lucide-react';
 
   export default function App() {
-    const [currentView, setCurrentView] = useState('student-home');
+    const [role, setRole] = useState(null);
+    const [currentView, setCurrentView] = useState('login');
     const [selectedQuizLecture, setSelectedQuizLecture] = useState(null);
     const [selectedVideoLecture, setSelectedVideoLecture] = useState(null);
     const [selectedDownloadLecture, setSelectedDownloadLecture] = useState(null);
@@ -40,6 +42,23 @@
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
     const [quizLecture, setQuizLecture] = useState(null);
+    const [analytics, setAnalytics] = useState({ progress: [], quizAttempts: [], quizSubmissions: [], doubts: [] });
+
+    const handleLogin = (nextRole) => {
+      window.localStorage.setItem('vidya-setu-role', nextRole);
+      setRole(nextRole);
+      setCurrentView(nextRole === 'teacher' ? 'teacher' : 'student-home');
+    };
+
+    const handleLogout = () => {
+      window.localStorage.removeItem('vidya-setu-role');
+      setRole(null);
+      setCurrentView('login');
+    };
+
+    useEffect(() => {
+      window.localStorage.removeItem('vidya-setu-role');
+    }, []);
 
   // Initialize pending sync count from IndexedDB & listen for online events
   useEffect(() => {
@@ -87,10 +106,27 @@
 
     useEffect(() => {
       fetchLectures();
+      fetch('/api/teacher/analytics')
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => data?.success && setAnalytics(data))
+        .catch(() => {});
     }, []);
 
     const handlePublishedSuccess = () => fetchLectures();
     const handleUpdatedSuccess = () => fetchLectures();
+    const handleReplyToDoubt = async (doubtId) => {
+      const reply = window.prompt('Teacher reply');
+      if (!reply?.trim()) return;
+      const response = await fetch(`/api/doubts/${encodeURIComponent(doubtId)}/reply`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAnalytics((current) => ({ ...current, doubts: current.doubts.map((doubt) => doubt.doubtId === doubtId ? data.doubt : doubt) }));
+      }
+    };
     const filteredLectures = lectures.filter((lec) => {
       const q = searchQuery.toLowerCase();
       return lec.title?.toLowerCase().includes(q) || lec.courseId?.toLowerCase().includes(q) || lec.subject?.toLowerCase().includes(q) || lec.description?.toLowerCase().includes(q);
@@ -162,6 +198,8 @@
         }
       : null;
 
+  if (!role) return <LoginPage onLogin={handleLogin} />;
+
   return (
     <div className="app-container">
       {[
@@ -194,6 +232,7 @@
               </button>
               <button className="student-nav-link" onClick={() => setCurrentView('teacher')}>Teacher Portal</button>
             </nav>
+            <button type="button" className="session-logout-btn" onClick={handleLogout}>Log out</button>
           </div>
         </header>
       ) : (
@@ -202,6 +241,7 @@
           onViewChange={setCurrentView}
           pendingSyncCount={pendingSyncCount}
           onOpenSync={() => setIsSyncModalOpen(true)}
+          onLogout={handleLogout}
         />
       )}
 
@@ -294,7 +334,8 @@
           )
         ) : (
           /* PARTS 1 & 2: TEACHER DASHBOARD VIEW */
-          <div className="teacher-dashboard-layout">
+          <>
+            <div className="teacher-dashboard-layout">
             {/* Dashboard Top Header */}
             <div className="dashboard-header">
               <div className="header-title">
@@ -324,6 +365,22 @@
                   <div className="stat-label">Total Lectures</div>
                   <div className="stat-value">{lectures.length}</div>
                   <div className="stat-label">Published Packages</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon green"><GraduationCap size={22} /></div>
+                <div className="stat-content">
+                  <div className="stat-value">{analytics.quizSubmissions.length}</div>
+                  <div className="stat-label">Student Quiz Results</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{ background: '#fff7ed', color: '#c2410c' }}><AlertTriangle size={22} /></div>
+                <div className="stat-content">
+                  <div className="stat-value">{analytics.doubts.length}</div>
+                  <div className="stat-label">Student Doubts</div>
                 </div>
               </div>
 
@@ -428,7 +485,22 @@
                 ))}
               </div>
             )}
-          </div>
+            </div>
+
+            {analytics.doubts.length > 0 && (
+              <section style={{ marginTop: '2rem' }}>
+                <div className="section-toolbar"><h3>Student Doubts</h3><span className="badge badge-published">{analytics.doubts.length} total</span></div>
+                <div className="lecture-grid">
+                  {analytics.doubts.map((doubt) => (
+                    <div className="lecture-card" key={doubt.doubtId}>
+                      <div><span className="badge badge-v1">{doubt.timestamp}</span><h4 className="lecture-card-title">{doubt.text}</h4><p className="lecture-card-desc">Lecture: {doubt.lectureId}</p><p className="lecture-card-desc">{doubt.teacherReply ? `Reply: ${doubt.teacherReply}` : 'Needs teacher reply'}</p></div>
+                      {!doubt.teacherReply && <button type="button" className="btn btn-primary" onClick={() => handleReplyToDoubt(doubt.doubtId)}>Reply</button>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </main>
 

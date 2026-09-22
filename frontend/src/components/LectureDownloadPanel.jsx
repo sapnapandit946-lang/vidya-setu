@@ -15,6 +15,7 @@ import {
   saveLectureDownloadChunk,
   saveLectureDownloadState,
 } from '../utils/indexedDB.js';
+import { saveProgressToBackend } from '../utils/backendApi.js';
 
 const DOWNLOAD_STATUSES = ['not_started', 'downloading', 'paused', 'completed', 'failed'];
 const VERIFICATION_STATUSES = ['pending', 'verified', 'failed'];
@@ -93,6 +94,12 @@ export const LectureDownloadPanel = ({ lecture, onWatchOffline }) => {
     stateRef.current = nextState;
     setDownloadState(nextState);
     await saveLectureDownloadState(nextState);
+    saveProgressToBackend({
+      lectureId: nextState.lectureId,
+      versionId: nextState.versionId,
+      downloadedBytes: nextState.downloadedBytes,
+      syncStatus: 'Synced',
+    }).catch(() => {});
   };
 
   const pauseDownload = async (manualPause = false) => {

@@ -13,6 +13,8 @@ const studentDoubtSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    versionId: { type: String, default: 'unknown', index: true },
+    studentId: { type: String, default: 'VS-STU-001', index: true },
     timestamp: {
       type: String,
       required: true,
@@ -26,6 +28,8 @@ const studentDoubtSchema = new mongoose.Schema(
       type: String,
       default: 'synced',
     },
+    teacherReply: { type: String, default: '' },
+    repliedAt: { type: Date, default: null },
     clientCreatedAt: {
       type: Date,
     },

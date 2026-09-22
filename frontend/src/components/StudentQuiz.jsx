@@ -7,6 +7,7 @@ import {
   resetQuizState,
   getPendingSyncCount,
 } from '../utils/indexedDB.js';
+import { saveQuizAttemptToBackend } from '../utils/backendApi.js';
 import { getQuizForLecture } from '../data/curriculumData.js';
 import {
   WifiOff,
@@ -122,6 +123,15 @@ export const StudentQuiz = ({ lecture, onBackToLectures, onPendingSyncChange }) 
         correctAnswer: currentQuestion.correctAnswer,
         score: optionKey === currentQuestion.correctAnswer ? 1 : 0,
       });
+      saveQuizAttemptToBackend({
+        attemptId: `${quizData.quizId}_${currentQuestion.questionId}`,
+        quizId: quizData.quizId,
+        lectureId: quizData.lectureId,
+        versionId: lecture?.versionId || lecture?.versionDetails?.versionId || 'unknown',
+        questionId: currentQuestion.questionId,
+        selectedAnswer: optionKey,
+        score: optionKey === currentQuestion.correctAnswer ? 1 : 0,
+      }).catch(() => {});
 
       const count = await getPendingSyncCount();
       setPendingSyncCount(count);

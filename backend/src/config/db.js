@@ -4,20 +4,16 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 let mongoMemoryServer = null;
 
 export const connectDB = async () => {
-  const atlasUri = process.env.MONGODB_URI;
+  const atlasUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/vidya_setu_new';
 
-  if (atlasUri && atlasUri.trim().length > 0) {
-    try {
-      console.log('Connecting to MongoDB Atlas...');
-      const conn = await mongoose.connect(atlasUri);
-      console.log(`Connected to MongoDB Atlas: ${conn.connection.host}`);
-      return;
-    } catch (error) {
-      console.warn('Failed to connect to MongoDB Atlas URI:', error.message);
-      console.log('Falling back to In-Memory MongoDB for local development/testing...');
-    }
-  } else {
-    console.log('No MONGODB_URI provided in environment. Initializing local In-Memory MongoDB Server...');
+  try {
+    console.log(`Connecting to MongoDB at ${atlasUri.startsWith('mongodb://127.0.0.1') ? 'local database' : 'configured database'}...`);
+    const conn = await mongoose.connect(atlasUri, { serverSelectionTimeoutMS: 5000 });
+    console.log(`Connected to MongoDB: ${conn.connection.host}`);
+    return;
+  } catch (error) {
+    console.warn('Failed to connect to configured MongoDB:', error.message);
+    console.log('Falling back to In-Memory MongoDB for local development/testing...');
   }
 
   try {

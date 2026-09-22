@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { connectDB } from './config/db.js';
 import lectureRoutes from './routes/lectureRoutes.js';
 import syncRoutes from './routes/syncRoutes.js';
+import learningRoutes from './routes/learningRoutes.js';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/lectures', lectureRoutes);
 
 // MicroSync Routes (Part 5)
 app.use('/api/sync', syncRoutes);
+app.use('/api', learningRoutes);
 
 // 404 Handler
 app.use((req, res) => {

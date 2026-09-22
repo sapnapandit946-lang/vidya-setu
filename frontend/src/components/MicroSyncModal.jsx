@@ -95,6 +95,16 @@ export const MicroSyncModal = ({ isOpen, onClose, onSyncComplete, lectures = [] 
             createdAt: att.createdAt
           }));
 
+      const attemptsPayload = pendingAttempts.map((att) => ({
+        attemptId: `${att.quizId}_${att.questionId}`,
+        quizId: att.quizId,
+        lectureId: att.lectureId,
+        questionId: att.questionId,
+        selectedAnswer: att.selectedAnswer,
+        score: att.score || 0,
+        createdAt: att.createdAt,
+      }));
+
       const doubtsPayload = pendingDoubts.map(d => ({
         doubtId: d.doubtId,
         lectureId: d.lectureId,
@@ -112,6 +122,7 @@ export const MicroSyncModal = ({ isOpen, onClose, onSyncComplete, lectures = [] 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quizzes: quizzesPayload,
+          attempts: attemptsPayload,
           doubts: doubtsPayload
         })
       });

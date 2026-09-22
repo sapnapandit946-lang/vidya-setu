@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpen, GraduationCap, Clock, WifiOff, Wifi, RefreshCw } from 'lucide-react';
 
-export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpenSync }) => {
+export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpenSync, onLogout }) => {
   return (
     <header className="navbar">
       <div className="nav-content">
@@ -76,6 +76,8 @@ export const Navbar = ({ currentView, onViewChange, pendingSyncCount = 0, onOpen
               <span>Teacher Portal</span>
             </div>
           )}
+
+          <button type="button" className="session-logout-btn" onClick={onLogout}>Log out</button>
         </div>
       </div>
     </header>
